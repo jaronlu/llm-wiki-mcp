@@ -9,10 +9,12 @@ from mcp.server.fastmcp import FastMCP
 from .config import load_config
 from .lint import run_lint as run_wiki_lint
 from .log import LogEntry, append_log as append_wiki_log
+from .frontmatter import validate_frontmatter as validate_wiki_frontmatter
 from .pages import read_page as read_wiki_page
 from .paths import WikiPaths
 from .raw import create_raw_source as create_wiki_raw_source
 from .raw import read_raw_source as read_wiki_raw_source
+from .related import find_related_pages as find_related_wiki_pages
 from .search import search_wiki as search_wiki_impl
 
 config = load_config()
@@ -78,6 +80,24 @@ def append_log(
         entry_date=entry_date,
     )
     return append_wiki_log(paths, entry, retention_entries=config.log_retention_entries)
+
+
+@mcp.tool(description="Validate a formal wiki page's YAML frontmatter shape.")
+def validate_frontmatter(page: str) -> dict[str, Any]:
+    """Validate required frontmatter fields for a formal wiki page or slug."""
+
+    return validate_wiki_frontmatter(paths, page)
+
+
+@mcp.tool(description="Find formal wiki pages related to a page or free-text query.")
+def find_related_pages(
+    page: str | None = None,
+    query: str | None = None,
+    limit: int = 10,
+) -> dict[str, Any]:
+    """Find metadata-rich related formal pages using lightweight local scoring."""
+
+    return find_related_wiki_pages(paths, page=page, query=query, limit=limit)
 
 
 @mcp.tool(description="Run python3 scripts/wiki_lint.py and return structured lint results.")
