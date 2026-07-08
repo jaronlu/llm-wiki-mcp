@@ -27,6 +27,12 @@ class WikiPaths:
     def rel(self, path: str | Path) -> str:
         return self.resolve(path).relative_to(self.root).as_posix()
 
+    def markdown_path(self, path: str | Path) -> str | Path:
+        candidate = Path(path)
+        if candidate.suffix:
+            return path
+        return Path(f"{path}.md")
+
     def require_existing_file(self, path: str | Path) -> Path:
         resolved = self.resolve(path)
         if not resolved.is_file():
@@ -46,7 +52,8 @@ class WikiPaths:
         return rel.startswith("domains/") or rel.startswith("entities/")
 
     def require_formal_page(self, path: str | Path) -> Path:
-        resolved = self.resolve(path)
+        normalized = self.markdown_path(path)
+        resolved = self.resolve(normalized)
         if not self.is_formal_page(resolved):
             raise WikiPathError(f"Path is not a formal wiki page: {self.rel(resolved)}")
         if resolved.suffix != ".md":

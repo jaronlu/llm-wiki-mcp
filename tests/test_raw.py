@@ -15,6 +15,15 @@ def test_read_raw_source(sample_wiki: Path) -> None:
     assert "LangGraph" in result["content"]
 
 
+def test_read_raw_source_supports_size_cap(sample_wiki: Path) -> None:
+    result = read_raw_source(WikiPaths(sample_wiki), "raw/10-AI/example.md", offset=2, limit=5)
+    assert result["content"] == "Raw E"
+    assert result["offset"] == 2
+    assert result["limit"] == 5
+    assert result["total_chars"] > 5
+    assert result["truncated"] is True
+
+
 def test_create_raw_source_disallows_overwrite(sample_wiki: Path) -> None:
     paths = WikiPaths(sample_wiki)
     create_raw_source(paths, "raw/10-AI/new.md", "# New\n")

@@ -31,5 +31,14 @@ def test_append_log_adds_top_entry_and_trims(sample_wiki: Path) -> None:
 def test_run_lint_returns_structured_summary(sample_wiki: Path) -> None:
     result = run_lint(WikiPaths(sample_wiki))
     assert result["exit_code"] == 0
+    assert result["timed_out"] is False
     assert result["summary"]["formal_pages"] == 1
     assert result["errors"] == []
+
+
+def test_run_lint_timeout_is_structured(sample_wiki: Path) -> None:
+    (sample_wiki / "scripts/wiki_lint.py").write_text("import time\ntime.sleep(1)\n")
+    result = run_lint(WikiPaths(sample_wiki), timeout_seconds=0.01)
+    assert result["exit_code"] is None
+    assert result["timed_out"] is True
+    assert "timed out" in result["errors"][0]

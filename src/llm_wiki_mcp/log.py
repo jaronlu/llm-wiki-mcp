@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import fcntl
+import os
+import tempfile
 from dataclasses import dataclass
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 from .paths import WikiPaths
@@ -29,6 +33,31 @@ class LogEntry:
         ])
 
 
+def _fsync_directory(path: Path) -> None:
+    try:
+        dir_fd = os.open(path, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(dir_fd)
+    finally:
+        os.close(dir_fd)
+
+
+def _atomic_write_text(path: Path, content: str) -> None:
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_name, path)
+        _fsync_directory(path.parent)
+    finally:
+        if os.path.exists(tmp_name):
+            os.unlink(tmp_name)
+
+
 def _split_header_and_entries(text: str) -> tuple[str, list[str]]:
     lines = text.splitlines()
     first_entry = next((idx for idx, line in enumerate(lines) if line.startswith("## [")), len(lines))
@@ -52,13 +81,19 @@ def _split_header_and_entries(text: str) -> tuple[str, list[str]]:
 
 def append_log(paths: WikiPaths, entry: LogEntry, retention_entries: int = 120) -> dict[str, Any]:
     log_path = paths.require_existing_file("log.md")
-    original = log_path.read_text(errors="replace")
-    header, entries = _split_header_and_entries(original)
-    rendered = entry.render().rstrip()
-    new_entries = [rendered, *entries]
-    trimmed_entries = max(0, len(new_entries) - retention_entries)
-    kept = new_entries[:retention_entries]
-    log_path.write_text(header + "\n\n".join(kept) + "\n")
+    lock_path = log_path.with_name(f"{log_path.name}.lock")
+    with lock_path.open("a+") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            original = log_path.read_text(errors="replace")
+            header, entries = _split_header_and_entries(original)
+            rendered = entry.render().rstrip()
+            new_entries = [rendered, *entries]
+            trimmed_entries = max(0, len(new_entries) - retention_entries)
+            kept = new_entries[:retention_entries]
+            _atomic_write_text(log_path, header + "\n\n".join(kept) + "\n")
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
     return {
         "updated": True,
         "path": paths.rel(log_path),

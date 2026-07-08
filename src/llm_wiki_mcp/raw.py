@@ -4,33 +4,44 @@ import os
 import tempfile
 from typing import Any
 
+from .content import DEFAULT_CONTENT_LIMIT, slice_content
 from .paths import WikiPathError, WikiPaths
 
 
-def read_raw_source(paths: WikiPaths, path: str) -> dict[str, Any]:
+def _fsync_directory(path: str) -> None:
+    try:
+        dir_fd = os.open(path, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(dir_fd)
+    finally:
+        os.close(dir_fd)
+
+
+def read_raw_source(
+    paths: WikiPaths,
+    path: str,
+    offset: int = 0,
+    limit: int = DEFAULT_CONTENT_LIMIT,
+) -> dict[str, Any]:
     file_path = paths.require_under(path, "raw")
     if not file_path.is_file():
         raise FileNotFoundError(f"File not found: {paths.rel(file_path)}")
+    sliced = slice_content(file_path.read_text(errors="replace"), offset=offset, limit=limit)
     return {
         "path": paths.rel(file_path),
-        "content": file_path.read_text(errors="replace"),
+        **sliced,
         "immutable": True,
     }
 
 
-def create_raw_source(
-    paths: WikiPaths,
-    path: str,
-    content: str,
-    allow_overwrite: bool = False,
-) -> dict[str, Any]:
+def create_raw_source(paths: WikiPaths, path: str, content: str) -> dict[str, Any]:
+    """Create a raw source atomically without overwriting existing files."""
     file_path = paths.require_under(path, "raw")
     rel = paths.rel(file_path)
     if not rel.endswith(".md"):
         raise WikiPathError(f"raw source must be a markdown file: {rel}")
-    existed_before = file_path.exists()
-    if existed_before and not allow_overwrite:
-        raise FileExistsError(f"raw source already exists: {rel}")
 
     file_path.parent.mkdir(parents=True, exist_ok=True)
     encoded = content.encode("utf-8")
@@ -40,9 +51,13 @@ def create_raw_source(
             handle.write(encoded)
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(tmp_name, file_path)
+        try:
+            os.link(tmp_name, file_path)
+        except FileExistsError as exc:
+            raise FileExistsError(f"raw source already exists: {rel}") from exc
+        _fsync_directory(str(file_path.parent))
     finally:
         if os.path.exists(tmp_name):
             os.unlink(tmp_name)
 
-    return {"created": True, "path": rel, "bytes": len(encoded), "overwritten": existed_before}
+    return {"created": True, "path": rel, "bytes": len(encoded), "overwritten": False}

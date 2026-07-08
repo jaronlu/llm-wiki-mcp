@@ -7,18 +7,10 @@ from typing import Any
 from .paths import WikiPaths
 
 SUMMARY_RE = re.compile(r"- (formal pages|catalog pages|errors|warnings): (\d+)")
+DEFAULT_LINT_TIMEOUT_SECONDS = 60.0
 
 
-def run_lint(paths: WikiPaths) -> dict[str, Any]:
-    proc = subprocess.run(
-        ["python3", "scripts/wiki_lint.py"],
-        cwd=paths.root,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        check=False,
-    )
-    output = proc.stdout or ""
+def _parse_lint_output(output: str) -> tuple[dict[str, int], list[str], list[str]]:
     summary: dict[str, int] = {}
     errors: list[str] = []
     warnings: list[str] = []
@@ -40,9 +32,37 @@ def run_lint(paths: WikiPaths) -> dict[str, Any]:
             errors.append(line[2:])
         elif line.startswith("- ") and section == "warnings":
             warnings.append(line[2:])
+    return summary, errors, warnings
 
+
+def run_lint(paths: WikiPaths, timeout_seconds: float = DEFAULT_LINT_TIMEOUT_SECONDS) -> dict[str, Any]:
+    try:
+        proc = subprocess.run(
+            ["python3", "scripts/wiki_lint.py"],
+            cwd=paths.root,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=False,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        output = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
+        message = f"wiki_lint.py timed out after {timeout_seconds:g}s"
+        return {
+            "exit_code": None,
+            "timed_out": True,
+            "summary": {},
+            "errors": [message],
+            "warnings": [],
+            "raw_output": output,
+        }
+
+    output = proc.stdout or ""
+    summary, errors, warnings = _parse_lint_output(output)
     return {
         "exit_code": proc.returncode,
+        "timed_out": False,
         "summary": summary,
         "errors": errors,
         "warnings": warnings,

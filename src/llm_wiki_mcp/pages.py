@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .content import DEFAULT_CONTENT_LIMIT, slice_content
 from .frontmatter import parse_markdown, title_from_content
 from .paths import WikiPaths
 
@@ -20,15 +21,21 @@ def extract_wikilinks(text: str) -> list[str]:
     return links
 
 
-def read_page(paths: WikiPaths, page: str) -> dict[str, Any]:
+def read_page(
+    paths: WikiPaths,
+    page: str,
+    offset: int = 0,
+    limit: int = DEFAULT_CONTENT_LIMIT,
+) -> dict[str, Any]:
     file_path = paths.require_formal_page(page)
     text = file_path.read_text(errors="replace")
     parsed = parse_markdown(text)
+    sliced = slice_content(parsed.content, offset=offset, limit=limit)
     return {
         "path": paths.rel(file_path),
         "frontmatter": parsed.frontmatter,
         "has_frontmatter": parsed.has_frontmatter,
         "title": parsed.frontmatter.get("title") or title_from_content(parsed.content),
-        "content": parsed.content,
+        **sliced,
         "wikilinks": extract_wikilinks(parsed.content),
     }
