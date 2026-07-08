@@ -4,11 +4,17 @@ from pathlib import Path
 
 import yaml
 
-from llm_wiki_mcp.candidates import create_formal_page_candidate, update_index_candidate, create_update_candidate
+from llm_wiki_mcp.candidates import (
+    create_formal_page_candidate,
+    create_update_candidate,
+    update_index_candidate,
+)
 from llm_wiki_mcp.paths import WikiPaths
 
 
-def test_create_formal_page_candidate_renders_markdown_without_writing(sample_wiki: Path) -> None:
+def test_create_formal_page_candidate_renders_markdown_without_writing(
+    sample_wiki: Path,
+) -> None:
     paths = WikiPaths(sample_wiki)
 
     result = create_formal_page_candidate(
@@ -36,7 +42,9 @@ def test_create_formal_page_candidate_renders_markdown_without_writing(sample_wi
     assert not (sample_wiki / "domains/agent/concepts/new-concept.md").exists()
 
 
-def test_create_formal_page_candidate_renders_yaml_safe_frontmatter(sample_wiki: Path) -> None:
+def test_create_formal_page_candidate_renders_yaml_safe_frontmatter(
+    sample_wiki: Path,
+) -> None:
     result = create_formal_page_candidate(
         WikiPaths(sample_wiki),
         path="domains/agent/concepts/yaml-safe.md",
@@ -78,7 +86,9 @@ def test_create_formal_page_candidate_rejects_existing_page(sample_wiki: Path) -
         raise AssertionError("expected FileExistsError")
 
 
-def test_create_formal_page_candidate_rejects_raw_source_path(sample_wiki: Path) -> None:
+def test_create_formal_page_candidate_rejects_raw_source_path(
+    sample_wiki: Path,
+) -> None:
     try:
         create_formal_page_candidate(
             WikiPaths(sample_wiki),
@@ -96,9 +106,13 @@ def test_create_formal_page_candidate_rejects_raw_source_path(sample_wiki: Path)
         raise AssertionError("expected ValueError")
 
 
-def test_update_index_candidate_inserts_link_under_existing_heading_without_writing(sample_wiki: Path) -> None:
+def test_update_index_candidate_inserts_link_under_existing_heading_without_writing(
+    sample_wiki: Path,
+) -> None:
     index_path = sample_wiki / "index.md"
-    index_path.write_text("# Index\n\n## Agent\n\n- [[domains/agent/concepts/example]] — Example\n")
+    index_path.write_text(
+        "# Index\n\n## Agent\n\n- [[domains/agent/concepts/example]] — Example\n"
+    )
 
     result = update_index_candidate(
         WikiPaths(sample_wiki),
@@ -112,8 +126,14 @@ def test_update_index_candidate_inserts_link_under_existing_heading_without_writ
     assert result["would_write"] is False
     assert result["already_indexed"] is False
     assert result["inserted"] is True
-    assert result["entry"] == "- [[domains/agent/concepts/new-concept]] — Reusable MCP concept"
-    assert "- [[domains/agent/concepts/new-concept]] — Reusable MCP concept" in result["content"]
+    assert (
+        result["entry"]
+        == "- [[domains/agent/concepts/new-concept]] — Reusable MCP concept"
+    )
+    assert (
+        "- [[domains/agent/concepts/new-concept]] — Reusable MCP concept"
+        in result["content"]
+    )
     assert "new-concept" not in index_path.read_text()
 
 
@@ -143,7 +163,9 @@ def test_update_index_candidate_matches_nested_heading_text(sample_wiki: Path) -
     assert result["content"].index(new_entry) < result["content"].index("### Summaries")
 
 
-def test_update_index_candidate_detects_alias_and_anchor_links(sample_wiki: Path) -> None:
+def test_update_index_candidate_detects_alias_and_anchor_links(
+    sample_wiki: Path,
+) -> None:
     index_path = sample_wiki / "index.md"
     index_path.write_text(
         "# Index\n\n"
@@ -187,7 +209,9 @@ def test_update_index_candidate_detects_existing_link(sample_wiki: Path) -> None
     assert result["content"] == (sample_wiki / "index.md").read_text()
 
 
-def test_create_update_candidate_returns_candidate_without_writing(sample_wiki: Path) -> None:
+def test_create_update_candidate_returns_candidate_without_writing(
+    sample_wiki: Path,
+) -> None:
     result = create_update_candidate(
         WikiPaths(sample_wiki),
         page="domains/agent/concepts/example.md",

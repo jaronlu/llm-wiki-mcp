@@ -6,15 +6,16 @@ pages or mutate index.md, preserving the Phase 2 candidate-first boundary.
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from pathlib import Path
 from typing import Any
 
-import re
 import yaml
 
 from .frontmatter import VALID_CONFIDENCE, VALID_PAGE_TYPES
 from .paths import WikiPaths
+from .responses import candidate_envelope
 
 
 def _today() -> str:
@@ -50,11 +51,14 @@ def _validate_candidate_metadata(
         raise ValueError(f"invalid type: {page_type}")
     if confidence not in VALID_CONFIDENCE:
         raise ValueError(f"invalid confidence: {confidence}")
-    if not isinstance(tags, list) or not all(isinstance(tag, str) and tag for tag in tags):
+    if not isinstance(tags, list) or not all(
+        isinstance(tag, str) and tag for tag in tags
+    ):
         raise ValueError("tags must be a non-empty list of strings")
-    if not isinstance(sources, list) or not all(isinstance(source, str) and source for source in sources):
+    if not isinstance(sources, list) or not all(
+        isinstance(source, str) and source for source in sources
+    ):
         raise ValueError("sources must be a non-empty list of strings")
-
 
 
 def _render_candidate_markdown(
@@ -121,8 +125,7 @@ def create_formal_page_candidate(
         body=body,
     )
     return {
-        "candidate": True,
-        "would_write": False,
+        **candidate_envelope(),
         "exists": False,
         "path": paths.rel(file_path),
         "frontmatter": {
@@ -172,7 +175,9 @@ def _heading_match(line: str) -> tuple[int, str] | None:
     return len(match.group(1)), match.group(2).strip()
 
 
-def _insert_under_heading(index_text: str, heading: str, entry: str) -> tuple[str, bool]:
+def _insert_under_heading(
+    index_text: str, heading: str, entry: str
+) -> tuple[str, bool]:
     """Insert an index entry under a markdown heading, creating it if needed."""
 
     lines = index_text.splitlines()
@@ -234,8 +239,7 @@ def update_index_candidate(
     else:
         content, inserted = _insert_under_heading(index_text, section_heading, entry)
     return {
-        "candidate": True,
-        "would_write": False,
+        **candidate_envelope(),
         "path": paths.rel(index_path),
         "page": f"{slug}.md",
         "title": title,
@@ -282,13 +286,13 @@ def create_update_candidate(
     wikilinks = new_wikilinks or []
 
     return {
-        "candidate": True,
-        "would_write": False,
+        **candidate_envelope(),
         "page": rel,
         "title": title,
         "source": source,
         "instruction": instruction,
-        "reason_for_update": reason_for_update or (
+        "reason_for_update": reason_for_update
+        or (
             f"Target page {rel} exists; providing update candidate instead of new page."
         ),
         "suggested_sections": sections,

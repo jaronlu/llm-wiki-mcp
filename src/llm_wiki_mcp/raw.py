@@ -9,6 +9,7 @@ from typing import Any
 
 from .content import DEFAULT_CONTENT_LIMIT, slice_content
 from .paths import WikiPathError, WikiPaths
+from .responses import response_envelope
 
 
 def _fsync_directory(path: str) -> None:
@@ -35,8 +36,11 @@ def read_raw_source(
     file_path = paths.require_raw_path(path)
     if not file_path.is_file():
         raise FileNotFoundError(f"File not found: {paths.rel(file_path)}")
-    sliced = slice_content(file_path.read_text(errors="replace"), offset=offset, limit=limit)
+    sliced = slice_content(
+        file_path.read_text(errors="replace"), offset=offset, limit=limit
+    )
     return {
+        **response_envelope(),
         "path": paths.rel(file_path),
         **sliced,
         "immutable": True,
@@ -69,6 +73,7 @@ def create_raw_source(paths: WikiPaths, path: str, content: str) -> dict[str, An
             os.unlink(tmp_name)
 
     return {
+        **response_envelope(would_write=True, next_action="append_log"),
         "created": True,
         "path": rel,
         "bytes": len(encoded),

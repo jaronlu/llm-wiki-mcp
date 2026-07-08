@@ -19,10 +19,10 @@
 
 ## P1 - Quality and maintainability
 
-- [ ] Add config validation for unknown fields, invalid directories, and invalid retention values.
-- [ ] Normalize tool response envelopes where practical: `candidate`, `would_write`, `warnings`, `errors`, and `next_action`.
-- [ ] Add an end-to-end smoke test covering init, inspect, raw create-only, candidates, and lint.
-- [ ] Make `run_lint` mode options clear in docs or support `quick` / `full`.
+- [x] Add config validation for unknown fields, invalid directories, and invalid retention values.
+- [x] Normalize tool response envelopes where practical: `candidate`, `would_write`, `warnings`, `errors`, and `next_action`.
+- [x] Add an end-to-end smoke test covering init, inspect, raw create-only, candidates, and lint.
+- [x] Make `run_lint` mode options clear in docs or support `quick` / `full`.
 
 ## P2 - Product polish
 

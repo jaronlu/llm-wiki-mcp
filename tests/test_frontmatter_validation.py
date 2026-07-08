@@ -9,7 +9,9 @@ from llm_wiki_mcp.paths import WikiPaths
 
 
 def test_validate_frontmatter_accepts_valid_formal_page(sample_wiki: Path) -> None:
-    result = validate_frontmatter(WikiPaths(sample_wiki), "domains/agent/concepts/example")
+    result = validate_frontmatter(
+        WikiPaths(sample_wiki), "domains/agent/concepts/example"
+    )
 
     assert result["valid"] is True
     assert result["path"] == "domains/agent/concepts/example.md"
@@ -18,7 +20,9 @@ def test_validate_frontmatter_accepts_valid_formal_page(sample_wiki: Path) -> No
 
 
 def test_validate_frontmatter_result_is_json_serializable(sample_wiki: Path) -> None:
-    result = validate_frontmatter(WikiPaths(sample_wiki), "domains/agent/concepts/example")
+    result = validate_frontmatter(
+        WikiPaths(sample_wiki), "domains/agent/concepts/example"
+    )
 
     json.dumps(result)
     assert result["frontmatter"]["created"] == "2026-01-01"
@@ -33,7 +37,9 @@ def test_read_page_result_is_json_serializable(sample_wiki: Path) -> None:
     assert result["frontmatter"]["updated"] == "2026-01-01"
 
 
-def test_validate_frontmatter_reports_missing_and_invalid_fields(sample_wiki: Path) -> None:
+def test_validate_frontmatter_reports_missing_and_invalid_fields(
+    sample_wiki: Path,
+) -> None:
     broken = sample_wiki / "domains/agent/concepts/broken.md"
     broken.write_text(
         "---\n"
@@ -47,7 +53,9 @@ def test_validate_frontmatter_reports_missing_and_invalid_fields(sample_wiki: Pa
         "# Broken\n"
     )
 
-    result = validate_frontmatter(WikiPaths(sample_wiki), "domains/agent/concepts/broken.md")
+    result = validate_frontmatter(
+        WikiPaths(sample_wiki), "domains/agent/concepts/broken.md"
+    )
 
     assert result["valid"] is False
     assert "missing required field: sources" in result["errors"]
@@ -71,7 +79,9 @@ def test_validate_frontmatter_reports_null_required_fields(sample_wiki: Path) ->
         "# Nulls\n"
     )
 
-    result = validate_frontmatter(WikiPaths(sample_wiki), "domains/agent/concepts/nulls.md")
+    result = validate_frontmatter(
+        WikiPaths(sample_wiki), "domains/agent/concepts/nulls.md"
+    )
 
     assert result["valid"] is False
     assert "required field is empty: title" in result["errors"]
@@ -85,8 +95,12 @@ def test_validate_frontmatter_reports_malformed_yaml(sample_wiki: Path) -> None:
     broken = sample_wiki / "domains/agent/concepts/malformed.md"
     broken.write_text("---\ntitle: [broken\n---\n\n# Malformed\n")
 
-    result = validate_frontmatter(WikiPaths(sample_wiki), "domains/agent/concepts/malformed.md")
+    result = validate_frontmatter(
+        WikiPaths(sample_wiki), "domains/agent/concepts/malformed.md"
+    )
 
     assert result["valid"] is False
     assert result["has_frontmatter"] is False
-    assert any(error.startswith("invalid YAML frontmatter:") for error in result["errors"])
+    assert any(
+        error.startswith("invalid YAML frontmatter:") for error in result["errors"]
+    )

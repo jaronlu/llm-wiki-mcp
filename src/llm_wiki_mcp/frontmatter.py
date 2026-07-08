@@ -9,8 +9,17 @@ from typing import Any
 import yaml
 
 from .paths import WikiPaths
+from .responses import response_envelope
 
-REQUIRED_FIELDS = ("title", "created", "updated", "type", "tags", "sources", "confidence")
+REQUIRED_FIELDS = (
+    "title",
+    "created",
+    "updated",
+    "type",
+    "tags",
+    "sources",
+    "confidence",
+)
 VALID_PAGE_TYPES = {"concept", "query", "comparison", "summary", "entity", "reference"}
 VALID_CONFIDENCE = {"high", "medium", "low"}
 
@@ -48,15 +57,19 @@ def parse_markdown(text: str) -> ParsedMarkdown:
         return ParsedMarkdown(frontmatter={}, content=text, has_frontmatter=False)
 
     raw_yaml = text[4:end]
-    body = text[end + len(marker):]
+    body = text[end + len(marker) :]
     loaded: Any
     try:
         loaded = yaml.safe_load(raw_yaml) or {}
     except yaml.YAMLError as exc:
-        return ParsedMarkdown(frontmatter={"_parse_error": str(exc)}, content=body, has_frontmatter=False)
+        return ParsedMarkdown(
+            frontmatter={"_parse_error": str(exc)}, content=body, has_frontmatter=False
+        )
     if not isinstance(loaded, dict):
         loaded = {}
-    return ParsedMarkdown(frontmatter=_json_safe(loaded), content=body, has_frontmatter=True)
+    return ParsedMarkdown(
+        frontmatter=_json_safe(loaded), content=body, has_frontmatter=True
+    )
 
 
 def title_from_content(content: str) -> str | None:
@@ -115,10 +128,13 @@ def validate_frontmatter(paths: WikiPaths, page: str) -> dict[str, Any]:
             warnings.append(f"{date_field} should be a YYYY-MM-DD string")
 
     return {
+        **response_envelope(
+            warnings=warnings,
+            errors=errors,
+            next_action="fix_frontmatter" if errors else "none",
+        ),
         "path": paths.rel(file_path),
         "valid": not errors,
-        "errors": errors,
-        "warnings": warnings,
         "has_frontmatter": parsed.has_frontmatter,
         "frontmatter": frontmatter,
     }

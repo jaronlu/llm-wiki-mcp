@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from .responses import response_envelope
+
 REQUIRED_FILES = (
     "SCHEMA.md",
     "AGENTS.md",
@@ -118,7 +120,9 @@ def _template_for(path: str, language: str) -> str:
     return templates[path]
 
 
-def init_wiki(root: str | Path, profile: str = "personal", language: str = "zh") -> dict[str, Any]:
+def init_wiki(
+    root: str | Path, profile: str = "personal", language: str = "zh"
+) -> dict[str, Any]:
     """Create a minimal llm-wiki structure without overwriting existing files."""
 
     root_path = Path(root).expanduser()
@@ -152,13 +156,17 @@ def init_wiki(root: str | Path, profile: str = "personal", language: str = "zh")
         warnings.append(f"unknown profile '{profile}', used generic templates")
 
     return {
+        **response_envelope(
+            would_write=bool(created),
+            warnings=warnings,
+            next_action="inspect_wiki",
+        ),
         "initialized": True,
         "root": str(root_path),
         "profile": profile,
         "language": language,
         "created": created,
         "skipped": skipped,
-        "warnings": warnings,
     }
 
 
@@ -170,11 +178,11 @@ def inspect_wiki(root: str | Path) -> dict[str, Any]:
     if not root_path.exists() or not root_path.is_dir():
         missing = [*REQUIRED_FILES, *REQUIRED_DIRS]
         return {
+            **response_envelope(next_action="run init_wiki"),
             "is_wiki": False,
             "root": str(root_path),
             "missing": missing,
             "detected": {"markdown_files": 0, "formal_pages": 0, "raw_sources": 0},
-            "next_action": "run init_wiki",
         }
 
     for item in REQUIRED_FILES:
@@ -190,9 +198,12 @@ def inspect_wiki(root: str | Path) -> dict[str, Any]:
         base = root_path / dirname
         if base.exists():
             formal_pages.extend(base.rglob("*.md"))
-    raw_sources = list((root_path / "raw").rglob("*.md")) if (root_path / "raw").exists() else []
+    raw_sources = (
+        list((root_path / "raw").rglob("*.md")) if (root_path / "raw").exists() else []
+    )
 
     return {
+        **response_envelope(next_action="ready" if not missing else "run init_wiki"),
         "is_wiki": not missing,
         "root": str(root_path),
         "missing": missing,
@@ -201,5 +212,4 @@ def inspect_wiki(root: str | Path) -> dict[str, Any]:
             "formal_pages": len(formal_pages),
             "raw_sources": len(raw_sources),
         },
-        "next_action": "ready" if not missing else "run init_wiki",
     }

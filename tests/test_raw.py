@@ -16,7 +16,9 @@ def test_read_raw_source(sample_wiki: Path) -> None:
 
 
 def test_read_raw_source_supports_size_cap(sample_wiki: Path) -> None:
-    result = read_raw_source(WikiPaths(sample_wiki), "raw/10-AI/example.md", offset=2, limit=5)
+    result = read_raw_source(
+        WikiPaths(sample_wiki), "raw/10-AI/example.md", offset=2, limit=5
+    )
     assert result["content"] == "Raw E"
     assert result["offset"] == 2
     assert result["limit"] == 5

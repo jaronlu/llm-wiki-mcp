@@ -11,7 +11,9 @@ def sample_wiki(tmp_path: Path) -> Path:
     (root / "domains/agent/concepts").mkdir(parents=True)
     (root / "raw/10-AI").mkdir(parents=True)
     (root / "scripts").mkdir()
-    (root / "index.md").write_text("# Index\n\n- [[domains/agent/concepts/example]] — Example\n")
+    (root / "index.md").write_text(
+        "# Index\n\n- [[domains/agent/concepts/example]] — Example\n"
+    )
     (root / "log.md").write_text(
         "# Wiki Log\n\n"
         "> Rolling recent log. Newest first.\n"
@@ -32,7 +34,9 @@ def sample_wiki(tmp_path: Path) -> Path:
         "---\n\n"
         "# Example Page\n\nLangGraph interrupt and [[domains/agent/concepts/other]].\n"
     )
-    (root / "raw/10-AI/example.md").write_text("# Raw Example\n\nLangGraph raw source.\n")
+    (root / "raw/10-AI/example.md").write_text(
+        "# Raw Example\n\nLangGraph raw source.\n"
+    )
     (root / "scripts/wiki_lint.py").write_text(
         "print('Wiki lint summary')\n"
         "print('- formal pages: 1')\n"

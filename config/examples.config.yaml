@@ -12,13 +12,3 @@ log_retention_entries: 120
 formal_dirs: [domains, entities]
 raw_dirs: [raw]
 non_formal_dirs: [drafts, reading]
-
-sensitive:
-  enabled: true
-  include_defaults: true
-  deny_patterns:
-    - name: company_internal
-      regex: "SecretCorp|InternalProject"
-      severity: high
-      replacement: "[REDACTED_INTERNAL]"
-  deny_terms: []

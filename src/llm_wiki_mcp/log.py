@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from .paths import WikiPaths
+from .responses import candidate_envelope, response_envelope
 
 
 @dataclass(frozen=True)
@@ -72,7 +73,9 @@ def _split_header_and_entries(text: str) -> tuple[str, list[str]]:
     """Split log.md into its static header and individual dated entries."""
 
     lines = text.splitlines()
-    first_entry = next((idx for idx, line in enumerate(lines) if line.startswith("## [")), len(lines))
+    first_entry = next(
+        (idx for idx, line in enumerate(lines) if line.startswith("## [")), len(lines)
+    )
     header = "\n".join(lines[:first_entry]).rstrip() + "\n\n"
     rest = "\n".join(lines[first_entry:]).strip()
     if not rest:
@@ -117,8 +120,7 @@ def create_log_candidate(
         entry_date=date,
     )
     return {
-        "candidate": True,
-        "would_write": False,
+        **candidate_envelope(),
         "date": entry.entry_date or local_date.today().isoformat(),
         "action": action,
         "subject": subject,
@@ -126,7 +128,9 @@ def create_log_candidate(
     }
 
 
-def append_log(paths: WikiPaths, entry: LogEntry, retention_entries: int = 120) -> dict[str, Any]:
+def append_log(
+    paths: WikiPaths, entry: LogEntry, retention_entries: int = 120
+) -> dict[str, Any]:
     """Append an entry to log.md under an exclusive lock and trim retention."""
 
     log_path = paths.require_existing_file("log.md")
@@ -144,6 +148,7 @@ def append_log(paths: WikiPaths, entry: LogEntry, retention_entries: int = 120) 
         finally:
             fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
     return {
+        **response_envelope(would_write=True),
         "updated": True,
         "path": paths.rel(log_path),
         "entry_count": len(kept),

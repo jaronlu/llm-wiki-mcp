@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from llm_wiki_mcp.related import find_related_pages
 from llm_wiki_mcp.paths import WikiPaths
+from llm_wiki_mcp.related import find_related_pages
 
 
-def test_find_related_pages_from_topic_uses_domain_tags_and_content(sample_wiki: Path) -> None:
+def test_find_related_pages_from_topic_uses_domain_tags_and_content(
+    sample_wiki: Path,
+) -> None:
     (sample_wiki / "domains/agent/concepts/interrupt.md").write_text(
         "---\n"
         "title: Interrupt Patterns\n"
@@ -32,17 +34,23 @@ def test_find_related_pages_from_topic_uses_domain_tags_and_content(sample_wiki:
         "# Prompt Style\n\nTone and editing.\n"
     )
 
-    result = find_related_pages(WikiPaths(sample_wiki), topic="LangGraph interrupt", domain="agent", limit=3)
+    result = find_related_pages(
+        WikiPaths(sample_wiki), topic="LangGraph interrupt", domain="agent", limit=3
+    )
 
     assert result["topic"] == "LangGraph interrupt"
     assert result["domain"] == "agent"
     assert result["count"] >= 1
-    assert "domains/agent/concepts/interrupt.md" in {item["path"] for item in result["results"]}
+    assert "domains/agent/concepts/interrupt.md" in {
+        item["path"] for item in result["results"]
+    }
     assert result["results"][0]["score"] > 0
     assert "reason" in result["results"][0]
 
 
-def test_find_related_pages_from_topic_returns_scored_matches(sample_wiki: Path) -> None:
+def test_find_related_pages_from_topic_returns_scored_matches(
+    sample_wiki: Path,
+) -> None:
     (sample_wiki / "domains/agent/concepts/langgraph.md").write_text(
         "---\n"
         "title: LangGraph Memory\n"
@@ -56,7 +64,9 @@ def test_find_related_pages_from_topic_returns_scored_matches(sample_wiki: Path)
         "# LangGraph Memory\n\nLangGraph agent memory patterns.\n"
     )
 
-    result = find_related_pages(WikiPaths(sample_wiki), topic="LangGraph memory", limit=2)
+    result = find_related_pages(
+        WikiPaths(sample_wiki), topic="LangGraph memory", limit=2
+    )
 
     assert result["topic"] == "LangGraph memory"
     assert result["results"][0]["path"] == "domains/agent/concepts/langgraph.md"
@@ -81,7 +91,9 @@ def test_find_related_pages_requires_topic(sample_wiki: Path) -> None:
         raise AssertionError("expected ValueError")
 
 
-def test_find_related_pages_skips_discovered_symlinks_outside_root(sample_wiki: Path, tmp_path: Path) -> None:
+def test_find_related_pages_skips_discovered_symlinks_outside_root(
+    sample_wiki: Path, tmp_path: Path
+) -> None:
     outside = tmp_path / "outside.md"
     outside.write_text("# Outside\n\nLangGraph secret outside root.\n")
     symlink = sample_wiki / "domains/agent/concepts/outside.md"
@@ -89,4 +101,7 @@ def test_find_related_pages_skips_discovered_symlinks_outside_root(sample_wiki: 
 
     result = find_related_pages(WikiPaths(sample_wiki), topic="LangGraph", limit=10)
 
-    assert all(item["path"] != "domains/agent/concepts/outside.md" for item in result["results"])
+    assert all(
+        item["path"] != "domains/agent/concepts/outside.md"
+        for item in result["results"]
+    )

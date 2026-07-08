@@ -7,7 +7,9 @@ from typing import Any
 DEFAULT_CONTENT_LIMIT = 50_000
 
 
-def slice_content(content: str, offset: int = 0, limit: int = DEFAULT_CONTENT_LIMIT) -> dict[str, Any]:
+def slice_content(
+    content: str, offset: int = 0, limit: int = DEFAULT_CONTENT_LIMIT
+) -> dict[str, Any]:
     """Return a bounded text slice plus pagination metadata."""
 
     if offset < 0:

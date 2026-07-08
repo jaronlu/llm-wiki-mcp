@@ -25,7 +25,7 @@ An LLM Wiki keeps immutable source material in `raw/`, compiles durable knowledg
 - `read_raw_source` — read immutable source material under `raw/`.
 - `create_raw_source` — create a new raw source; existing files are never overwritten.
 - `append_log` — write a structured rolling `log.md` entry and trim old entries.
-- `run_lint` — run `python3 scripts/wiki_lint.py` and return structured results.
+- `run_lint` — run `python3 scripts/wiki_lint.py` with `mode="full"` and return structured results.
 
 ### Candidate tools
 
@@ -65,6 +65,8 @@ An LLM Wiki keeps immutable source material in `raw/`, compiles durable knowledg
 - `audit_wiki_structure` — audit structure and standardization gaps without writing.
 - `standardize_page_candidate` — render a frontmatter-standardized page candidate without writing.
 
+Tool responses include a common envelope where practical: `candidate`, `would_write`, `warnings`, `errors`, and `next_action`.
+
 ## Development
 
 ```bash
@@ -89,9 +91,10 @@ Then edit `config/config.yaml` for your machine:
 - `init_wiki_root`: optional default target for `init_wiki` when the tool call does not pass `root`.
 - `allow_write_raw`: set to `true` only if this MCP host may create new immutable raw sources.
 - `formal_dirs`, `raw_dirs`, `non_formal_dirs`: top-level directory names for your wiki layout.
-- `sensitive`: optional public-draft safety patterns and terms.
 
 `config/config.yaml` is ignored by Git. Commit `config/examples.config.yaml`; keep real local paths and private rules in `config/config.yaml`.
+
+Config loading validates top-level fields, directory names, and retention values. Unknown fields, nested directory paths such as `domains/agent`, empty directory lists, and non-positive `log_retention_entries` values fail fast with a `ValueError`.
 
 Configuration precedence:
 
@@ -193,4 +196,4 @@ mcp_servers:
 - Formal page writes, `index.md` updates, migration, and public export are candidate-first.
 - Source digest tracking uses `.llm-wiki/source-manifest.json`; it does not modify formal page frontmatter.
 - Shared docs/examples use placeholders; private local config should stay untracked.
-- `run_lint` returns lint errors as structured data instead of treating non-zero lint exit as MCP transport failure.
+- `run_lint` currently accepts `mode="full"` only and returns lint errors as structured data instead of treating non-zero lint exit as MCP transport failure.

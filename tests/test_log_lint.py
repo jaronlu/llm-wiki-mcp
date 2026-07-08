@@ -73,6 +73,23 @@ def test_run_lint_os_error_is_structured(tmp_path: Path) -> None:
     assert "failed to run scripts/wiki_lint.py" in result["errors"][0]
 
 
+def test_run_lint_nonzero_without_error_section_is_structured(sample_wiki: Path) -> None:
+    (sample_wiki / "scripts/wiki_lint.py").write_text(
+        "print('Wiki lint summary')\n"
+        "print('- formal pages: 1')\n"
+        "print('- catalog pages: 1')\n"
+        "print('- errors: 1')\n"
+        "print('- warnings: 0')\n"
+        "raise SystemExit(1)\n"
+    )
+
+    result = run_lint(WikiPaths(sample_wiki))
+
+    assert result["exit_code"] == 1
+    assert result["errors"] == ["scripts/wiki_lint.py exited with code 1"]
+    assert result["next_action"] == "fix_lint_errors"
+
+
 def test_append_log_concurrent_writes_keep_all_entries(sample_wiki: Path) -> None:
     paths = WikiPaths(sample_wiki)
 

@@ -8,6 +8,7 @@ from typing import Any
 from .content import DEFAULT_CONTENT_LIMIT, slice_content
 from .frontmatter import parse_markdown, title_from_content
 from .paths import WikiPaths
+from .responses import response_envelope
 
 WIKILINK_RE = re.compile(r"\[\[([^\]|#]+)")
 
@@ -68,10 +69,13 @@ def read_page(
     sliced = slice_content(parsed.content, offset=offset, limit=limit)
     warnings = [] if parsed.has_frontmatter else ["missing YAML frontmatter"]
     return {
+        **response_envelope(
+            warnings=warnings,
+            next_action="validate_frontmatter" if warnings else "none",
+        ),
         "path": paths.rel(file_path),
         "frontmatter": parsed.frontmatter,
         "has_frontmatter": parsed.has_frontmatter,
-        "warnings": warnings,
         "title": parsed.frontmatter.get("title") or title_from_content(parsed.content),
         **sliced,
         "wikilinks": extract_wikilinks(parsed.content),

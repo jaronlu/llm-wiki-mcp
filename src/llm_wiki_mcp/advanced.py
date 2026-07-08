@@ -18,6 +18,7 @@ from .candidates import create_formal_page_candidate
 from .frontmatter import parse_markdown, title_from_content
 from .paths import WikiPathError, WikiPaths
 from .related import find_related_pages
+from .responses import candidate_envelope, response_envelope
 
 TOKEN_RE = re.compile(r"[\w\u4e00-\u9fff\-]+")
 WIKILINK_WITH_ALIAS_RE = re.compile(r"\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]")
@@ -220,6 +221,7 @@ def semantic_search(
 
     results.sort(key=lambda item: (-item["score"], item["path"], item["chunk_index"]))
     return {
+        **response_envelope(next_action="read_page" if results else "refine_query"),
         "query": query,
         "scope": scope,
         "embedding": "local-token-vector",
@@ -276,6 +278,7 @@ def classify_source_candidate(
             "no strong related page found; consider an independently recallable page"
         )
     return {
+        **response_envelope(),
         "source": paths.rel(source_path),
         "classification": classification,
         "reason": reason,
@@ -409,6 +412,11 @@ def validate_public_safety(
                 "snippet": " ".join(text[start:end].split()),
             })
     return {
+        **response_envelope(
+            warnings=[] if not issues else ["public safety issues found"],
+            errors=[],
+            next_action="review_issues" if issues else "none",
+        ),
         "safe": not issues,
         "page": rel,
         "issues": issues,
@@ -445,8 +453,9 @@ def write_public_draft(
     content = f"# {public_title}\n\n{body}\n"
     safety = validate_public_safety(paths, content=content)
     return {
-        "candidate": True,
-        "would_write": False,
+        **candidate_envelope(
+            warnings=[] if safety["safe"] else ["public safety issues found"]
+        ),
         "would_publish": False,
         "source_page": paths.rel(file_path),
         "title": public_title,
@@ -515,7 +524,16 @@ def find_referencing_pages(paths: WikiPaths, source: str) -> dict[str, Any]:
                 "type": doc.frontmatter.get("type"),
                 "tags": doc.frontmatter.get("tags", []) or [],
             })
-    return {"source": rel_source, "count": len(pages), "pages": pages}
+    return {
+        **response_envelope(
+            next_action="create_update_candidate"
+            if pages
+            else "create_formal_page_candidate"
+        ),
+        "source": rel_source,
+        "count": len(pages),
+        "pages": pages,
+    }
 
 
 def detect_new_source(paths: WikiPaths, source: str | None = None) -> dict[str, Any]:
@@ -556,7 +574,12 @@ def detect_new_source(paths: WikiPaths, source: str | None = None) -> dict[str, 
             "referencing_pages": references["pages"],
             "suggested_action": suggested_action,
         })
-    return {"manifest": MANIFEST_PATH, "count": len(changes), "changes": changes}
+    return {
+        **response_envelope(next_action="review_source_changes" if changes else "none"),
+        "manifest": MANIFEST_PATH,
+        "count": len(changes),
+        "changes": changes,
+    }
 
 
 def update_source_manifest(
@@ -583,6 +606,7 @@ def update_source_manifest(
     path = _manifest_path(paths)
     _atomic_write_json(path, manifest)
     return {
+        **response_envelope(would_write=True),
         "updated": True,
         "path": paths.rel(path),
         "sources": updated,
@@ -618,7 +642,13 @@ def suggest_wikilinks(
             "score": round(score, 6),
         })
     suggestions.sort(key=lambda item: (-item["score"], item["path"]))
-    return {"count": min(len(suggestions), limit), "suggestions": suggestions[:limit]}
+    return {
+        **response_envelope(
+            next_action="review_suggestions" if suggestions else "none"
+        ),
+        "count": min(len(suggestions), limit),
+        "suggestions": suggestions[:limit],
+    }
 
 
 def find_uncompiled_sources(paths: WikiPaths) -> dict[str, Any]:
@@ -631,7 +661,13 @@ def find_uncompiled_sources(paths: WikiPaths) -> dict[str, Any]:
             referenced.update(str(source) for source in sources)
     raw_sources = [paths.rel(path) for path in _iter_markdown(paths, paths.raw_dirs)]
     uncompiled = sorted(source for source in raw_sources if source not in referenced)
-    return {"count": len(uncompiled), "sources": uncompiled}
+    return {
+        **response_envelope(
+            next_action="compile_or_ignore_sources" if uncompiled else "none"
+        ),
+        "count": len(uncompiled),
+        "sources": uncompiled,
+    }
 
 
 def find_duplicate_topics(
@@ -659,6 +695,9 @@ def find_duplicate_topics(
                 })
     duplicates.sort(key=lambda item: (-item["score"], item["left"], item["right"]))
     return {
+        **response_envelope(
+            next_action="suggest_merge_candidates" if duplicates else "none"
+        ),
         "threshold": threshold,
         "count": min(len(duplicates), limit),
         "duplicates": duplicates[:limit],
@@ -704,6 +743,7 @@ def find_stale_pages(
         })
     stale.sort(key=lambda item: (str(item["updated"]), item["path"]))
     return {
+        **response_envelope(next_action="refresh_stale_pages" if stale else "none"),
         "older_than_days": older_than_days,
         "count": min(len(stale), limit),
         "pages": stale[:limit],
@@ -723,7 +763,13 @@ def find_low_confidence_pages(paths: WikiPaths, limit: int = 20) -> dict[str, An
         for doc in _iter_formal_docs(paths)
         if doc.frontmatter.get("confidence") == "low"
     ]
-    return {"count": min(len(pages), limit), "pages": pages[:limit]}
+    return {
+        **response_envelope(
+            next_action="strengthen_low_confidence_pages" if pages else "none"
+        ),
+        "count": min(len(pages), limit),
+        "pages": pages[:limit],
+    }
 
 
 def suggest_merge_candidates(
@@ -745,7 +791,13 @@ def suggest_merge_candidates(
         }
         for item in duplicates
     ]
-    return {"count": len(suggestions), "suggestions": suggestions}
+    return {
+        **response_envelope(
+            next_action="review_merge_candidates" if suggestions else "none"
+        ),
+        "count": len(suggestions),
+        "suggestions": suggestions,
+    }
 
 
 def knowledge_health_review(paths: WikiPaths) -> dict[str, Any]:
@@ -766,6 +818,7 @@ def knowledge_health_review(paths: WikiPaths) -> dict[str, Any]:
     score -= min(15, stale["count"])
     score -= min(15, low_confidence["count"])
     return {
+        **response_envelope(next_action="review_health_next_actions"),
         "score": max(0, score),
         "lint": lint,
         "uncompiled_sources": uncompiled,
@@ -796,8 +849,11 @@ def audit_wiki_structure(paths: WikiPaths) -> dict[str, Any]:
         if not parse_markdown(doc.path.read_text(errors="replace")).has_frontmatter
     ]
     return {
-        "candidate": True,
-        "would_write": False,
+        **candidate_envelope(
+            next_action="standardize_page_candidate"
+            if formal_without_frontmatter
+            else "none"
+        ),
         "missing_dirs": missing_dirs,
         "formal_pages_without_frontmatter": formal_without_frontmatter,
         "recommendations": [
@@ -838,9 +894,9 @@ def standardize_page_candidate(
         "",
     ])
     return {
-        "candidate": True,
-        "would_write": False,
+        **candidate_envelope(
+            warnings=["sources and tags require human review before applying"]
+        ),
         "path": paths.rel(file_path),
         "content": content,
-        "warnings": ["sources and tags require human review before applying"],
     }

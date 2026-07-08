@@ -7,6 +7,7 @@ import subprocess
 from typing import Any
 
 from .paths import WikiPaths
+from .responses import response_envelope
 
 SUMMARY_RE = re.compile(r"- (formal pages|catalog pages|errors|warnings): (\d+)")
 DEFAULT_LINT_TIMEOUT_SECONDS = 60.0
@@ -63,33 +64,42 @@ def run_lint(
         output = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
         message = f"wiki_lint.py timed out after {timeout_seconds:g}s"
         return {
+            **response_envelope(
+                errors=[message],
+                next_action="inspect_lint_script",
+            ),
             "exit_code": None,
             "timed_out": True,
             "summary": {},
-            "errors": [message],
-            "warnings": [],
             "raw_output": output,
         }
     except OSError as exc:
         message = f"failed to run scripts/wiki_lint.py: {exc}"
         return {
+            **response_envelope(
+                errors=[message],
+                next_action="inspect_lint_script",
+            ),
             "exit_code": None,
             "timed_out": False,
             "summary": {},
-            "errors": [message],
-            "warnings": [],
             "raw_output": "",
         }
 
     output = proc.stdout or ""
     summary, errors, warnings = _parse_lint_output(output)
+    if proc.returncode != 0 and not errors:
+        errors = [f"scripts/wiki_lint.py exited with code {proc.returncode}"]
     return {
+        **response_envelope(
+            warnings=warnings,
+            errors=errors,
+            next_action="fix_lint_errors" if errors else "none",
+        ),
         "exit_code": proc.returncode,
         "timed_out": False,
         "formal_pages": summary.get("formal_pages", 0),
         "catalog_pages": summary.get("catalog_pages", 0),
         "summary": summary,
-        "errors": errors,
-        "warnings": warnings,
         "raw_output": output,
     }

@@ -8,6 +8,8 @@ from typing import Any, Iterable
 
 from .frontmatter import parse_markdown, title_from_content
 from .paths import WikiPaths
+from .responses import response_envelope
+
 
 def _iter_markdown(root: Path, dirs: Iterable[str]) -> Iterable[Path]:
     """Yield markdown files under selected top-level directories if present."""
@@ -67,7 +69,9 @@ def _field_text(value: Any) -> str:
     return str(value or "").casefold()
 
 
-def _match_score(*, phrase: str, terms: list[str], path: str, title: str, tags: str, body: str) -> int:
+def _match_score(
+    *, phrase: str, terms: list[str], path: str, title: str, tags: str, body: str
+) -> int:
     """Score partial query matches, weighting high-signal metadata above body text."""
 
     searchable = "\n".join([path, title, tags, body])
@@ -133,7 +137,9 @@ def search_wiki(
         if page_type != "any" and parsed.frontmatter.get("type") != page_type:
             continue
 
-        title = _field_text(parsed.frontmatter.get("title") or title_from_content(parsed.content))
+        title = _field_text(
+            parsed.frontmatter.get("title") or title_from_content(parsed.content)
+        )
         tags = _field_text(parsed.frontmatter.get("tags", []) or [])
         body = parsed.content.casefold()
         score = _match_score(
@@ -148,18 +154,28 @@ def search_wiki(
             continue
 
         slug = rel[:-3] if rel.endswith(".md") else rel
-        scored_results.append((score, {
-            "path": rel,
-            "title": parsed.frontmatter.get("title") or title_from_content(parsed.content),
-            "type": parsed.frontmatter.get("type"),
-            "tags": parsed.frontmatter.get("tags", []) or [],
-            "sources": parsed.frontmatter.get("sources", []) or [],
-            "confidence": parsed.frontmatter.get("confidence"),
-            "indexed": slug in indexed if is_formal else False,
-            "snippet": _snippet(text, terms),
-            "score": score,
-        }))
+        scored_results.append((
+            score,
+            {
+                "path": rel,
+                "title": parsed.frontmatter.get("title")
+                or title_from_content(parsed.content),
+                "type": parsed.frontmatter.get("type"),
+                "tags": parsed.frontmatter.get("tags", []) or [],
+                "sources": parsed.frontmatter.get("sources", []) or [],
+                "confidence": parsed.frontmatter.get("confidence"),
+                "indexed": slug in indexed if is_formal else False,
+                "snippet": _snippet(text, terms),
+                "score": score,
+            },
+        ))
 
     scored_results.sort(key=lambda item: (-item[0], item[1]["path"]))
     results = [result for _, result in scored_results[:limit]]
-    return {"query": query, "scope": scope, "count": len(results), "results": results}
+    return {
+        **response_envelope(next_action="read_page" if results else "refine_query"),
+        "query": query,
+        "scope": scope,
+        "count": len(results),
+        "results": results,
+    }

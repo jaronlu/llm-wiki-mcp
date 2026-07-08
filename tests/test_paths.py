@@ -13,7 +13,9 @@ def test_resolve_rejects_parent_escape(sample_wiki: Path) -> None:
         paths.resolve("../outside.md")
 
 
-def test_resolve_rejects_absolute_outside_root(sample_wiki: Path, tmp_path: Path) -> None:
+def test_resolve_rejects_absolute_outside_root(
+    sample_wiki: Path, tmp_path: Path
+) -> None:
     outside = tmp_path / "outside.md"
     outside.write_text("outside")
     paths = WikiPaths(sample_wiki)

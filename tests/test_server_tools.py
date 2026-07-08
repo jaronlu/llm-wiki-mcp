@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
+import os
 import re
+from pathlib import Path
 
 import pytest
+
+os.environ.setdefault("LLM_WIKI_MCP_CONFIG", "/tmp/llm-wiki-mcp-test-missing-config.yaml")
 
 from llm_wiki_mcp.server import mcp
 
