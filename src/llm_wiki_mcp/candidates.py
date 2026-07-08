@@ -29,8 +29,8 @@ def _formal_candidate_path(paths: WikiPaths, path: str | Path) -> Path:
     normalized = paths.markdown_path(path)
     resolved = paths.resolve(normalized)
     rel = paths.rel(resolved)
-    if not (rel.startswith("domains/") or rel.startswith("entities/")):
-        raise ValueError("formal page candidate must be under domains/ or entities/")
+    if not paths.is_formal_page(resolved):
+        raise ValueError("formal page candidate must be under configured formal_dirs")
     if resolved.suffix != ".md":
         raise ValueError(f"formal page candidate must be markdown: {rel}")
     if resolved.exists():
@@ -144,8 +144,8 @@ def _page_slug(paths: WikiPaths, page: str) -> str:
 
     resolved = paths.resolve(paths.markdown_path(page))
     rel = paths.rel(resolved)
-    if not (rel.startswith("domains/") or rel.startswith("entities/")):
-        raise ValueError("index candidate page must be under domains/ or entities/")
+    if not paths.is_formal_page(resolved):
+        raise ValueError("index candidate page must be under configured formal_dirs")
     if not rel.endswith(".md"):
         raise ValueError(f"index candidate page must be markdown: {rel}")
     return rel[:-3]
@@ -224,4 +224,55 @@ def update_index_candidate(
         "already_indexed": already_indexed,
         "inserted": inserted,
         "content": content,
+    }
+
+
+def create_update_candidate(
+    paths: WikiPaths,
+    page: str,
+    title: str,
+    source: str | None = None,
+    instruction: str | None = None,
+    new_sections: list[str] | None = None,
+    new_sources: list[str] | None = None,
+    new_wikilinks: list[str] | None = None,
+    reason_for_update: str | None = None,
+) -> dict[str, Any]:
+    """Return an update candidate for an existing formal page without writing it.
+
+    Personal wikis grow more often through incremental updates than fresh pages.
+    This candidate tells the caller what would change and why updated is preferred
+    over creating a new page.
+    """
+
+    if not title.strip():
+        raise ValueError("title must not be empty")
+    if not page.strip():
+        raise ValueError("page must not be empty")
+
+    try:
+        file_path = paths.require_formal_page(page)
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(f"target page not found: {page}") from exc
+
+    rel = paths.rel(file_path)
+    updated_date = _today()
+    sections = new_sections or []
+    sources = new_sources or []
+    wikilinks = new_wikilinks or []
+
+    return {
+        "candidate": True,
+        "would_write": False,
+        "page": rel,
+        "title": title,
+        "source": source,
+        "instruction": instruction,
+        "reason_for_update": reason_for_update or (
+            f"Target page {rel} exists; providing update candidate instead of new page."
+        ),
+        "suggested_sections": sections,
+        "suggested_sources": sources,
+        "suggested_wikilinks": wikilinks,
+        "updated": updated_date,
     }

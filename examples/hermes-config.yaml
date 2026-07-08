@@ -1,10 +1,21 @@
 mcp_servers:
   llm_wiki:
-    command: "uv"
+    command: "uvx"
     args:
-      - "--directory"
-      - "PROJECT_ROOT"
-      - "run"
       - "llm-wiki-mcp"
+    env:
+      LLM_WIKI_MCP_CONFIG: "/path/to/llm-wiki.yaml"
     timeout: 120
     connect_timeout: 60
+
+# Local development alternative:
+# mcp_servers:
+#   llm_wiki:
+#     command: "uv"
+#     args:
+#       - "--directory"
+#       - "/path/to/llm-wiki-mcp"
+#       - "run"
+#       - "llm-wiki-mcp"
+#     env:
+#       LLM_WIKI_ROOT: "/path/to/wiki"

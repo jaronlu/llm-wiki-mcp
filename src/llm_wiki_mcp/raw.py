@@ -31,7 +31,7 @@ def read_raw_source(
 ) -> dict[str, Any]:
     """Read a raw source file with pagination metadata and immutable marker."""
 
-    file_path = paths.require_under(path, "raw")
+    file_path = paths.require_raw_path(path)
     if not file_path.is_file():
         raise FileNotFoundError(f"File not found: {paths.rel(file_path)}")
     sliced = slice_content(file_path.read_text(errors="replace"), offset=offset, limit=limit)
@@ -45,7 +45,7 @@ def read_raw_source(
 def create_raw_source(paths: WikiPaths, path: str, content: str) -> dict[str, Any]:
     """Create a raw source atomically without overwriting existing files."""
 
-    file_path = paths.require_under(path, "raw")
+    file_path = paths.require_raw_path(path)
     rel = paths.rel(file_path)
     if not rel.endswith(".md"):
         raise WikiPathError(f"raw source must be a markdown file: {rel}")

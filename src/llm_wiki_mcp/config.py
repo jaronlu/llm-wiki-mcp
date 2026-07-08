@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-DEFAULT_WIKI_ROOT = Path("PROJECT_WIKI_ROOT")
+DEFAULT_WIKI_ROOT = Path.home() / "llm-wiki"
 
 
 @dataclass(frozen=True)
@@ -22,6 +22,9 @@ class Config:
     allow_update_index: bool = False
     allow_modify_schema: bool = False
     log_retention_entries: int = 120
+    formal_dirs: tuple[str, ...] = ("domains", "entities")
+    raw_dirs: tuple[str, ...] = ("raw",)
+    non_formal_dirs: tuple[str, ...] = ("drafts", "reading")
 
 
 def _as_bool(value: Any, default: bool) -> bool:
@@ -34,6 +37,18 @@ def _as_bool(value: Any, default: bool) -> bool:
     if isinstance(value, str):
         return value.strip().lower() in {"1", "true", "yes", "y", "on"}
     return bool(value)
+
+
+def _as_tuple(value: Any, default: tuple[str, ...]) -> tuple[str, ...]:
+    """Coerce a YAML scalar/list into a tuple of strings."""
+
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return (value,)
+    if isinstance(value, list):
+        return tuple(str(item) for item in value if str(item).strip())
+    return default
 
 
 def load_config(config_path: str | Path | None = None) -> Config:
@@ -57,4 +72,7 @@ def load_config(config_path: str | Path | None = None) -> Config:
         allow_update_index=_as_bool(data.get("allow_update_index"), False),
         allow_modify_schema=_as_bool(data.get("allow_modify_schema"), False),
         log_retention_entries=int(data.get("log_retention_entries", 120)),
+        formal_dirs=_as_tuple(data.get("formal_dirs"), ("domains", "entities")),
+        raw_dirs=_as_tuple(data.get("raw_dirs"), ("raw",)),
+        non_formal_dirs=_as_tuple(data.get("non_formal_dirs"), ("drafts", "reading")),
     )

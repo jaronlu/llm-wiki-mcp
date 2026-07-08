@@ -11,6 +11,8 @@ async def test_all_tools_are_registered() -> None:
     names = {tool.name for tool in tools}
 
     assert "search_wiki" in names
+    assert "init_wiki" in names
+    assert "inspect_wiki" in names
     assert "read_page" in names
     assert "read_raw_source" in names
     assert "create_raw_source" in names
@@ -19,4 +21,6 @@ async def test_all_tools_are_registered() -> None:
     assert "find_related_pages" in names
     assert "create_formal_page_candidate" in names
     assert "update_index_candidate" in names
+    assert "create_update_candidate" in names
+    assert "create_log_candidate" in names
     assert "run_lint" in names

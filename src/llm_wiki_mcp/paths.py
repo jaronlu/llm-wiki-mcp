@@ -15,6 +15,9 @@ class WikiPaths:
     """Resolve and validate paths relative to a single llm-wiki root."""
 
     root: Path
+    formal_dirs: tuple[str, ...] = ("domains", "entities")
+    raw_dirs: tuple[str, ...] = ("raw",)
+    non_formal_dirs: tuple[str, ...] = ("drafts", "reading")
 
     def __post_init__(self) -> None:
         """Normalize the configured wiki root once at construction time."""
@@ -63,11 +66,28 @@ class WikiPaths:
             raise WikiPathError(f"Path must be under {prefix}: {rel}")
         return resolved
 
+    def require_under_any(self, path: str | Path, prefixes: tuple[str, ...], label: str) -> Path:
+        """Resolve a path and require that it stays under one allowed subdirectory."""
+
+        resolved = self.resolve(path)
+        rel = resolved.relative_to(self.root).as_posix()
+        for prefix in prefixes:
+            clean_prefix = prefix.strip("/")
+            if rel == clean_prefix or rel.startswith(f"{clean_prefix}/"):
+                return resolved
+        allowed = ", ".join(prefixes)
+        raise WikiPathError(f"Path must be under {label} ({allowed}): {rel}")
+
+    def require_raw_path(self, path: str | Path) -> Path:
+        """Resolve a path and require that it belongs to configured raw zones."""
+
+        return self.require_under_any(path, self.raw_dirs, "raw_dirs")
+
     def is_formal_page(self, path: str | Path) -> bool:
         """Return whether a path belongs to the formal wiki page zones."""
 
         rel = self.rel(path)
-        return rel.startswith("domains/") or rel.startswith("entities/")
+        return any(rel == dirname.strip("/") or rel.startswith(f"{dirname.strip('/')}/") for dirname in self.formal_dirs)
 
     def require_formal_page(self, path: str | Path) -> Path:
         """Resolve a formal wiki page path or slug and require an existing markdown file."""

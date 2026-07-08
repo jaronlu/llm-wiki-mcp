@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from llm_wiki_mcp.candidates import create_formal_page_candidate, update_index_candidate
+from llm_wiki_mcp.candidates import create_formal_page_candidate, update_index_candidate, create_update_candidate
 from llm_wiki_mcp.paths import WikiPaths
 
 
@@ -91,7 +91,7 @@ def test_create_formal_page_candidate_rejects_raw_source_path(sample_wiki: Path)
             body="# Bad\n",
         )
     except ValueError as exc:
-        assert "formal page candidate must be under domains/ or entities/" in str(exc)
+        assert "formal page candidate must be under configured formal_dirs" in str(exc)
     else:
         raise AssertionError("expected ValueError")
 
@@ -159,3 +159,40 @@ def test_update_index_candidate_detects_existing_link(sample_wiki: Path) -> None
     assert result["already_indexed"] is True
     assert result["inserted"] is False
     assert result["content"] == (sample_wiki / "index.md").read_text()
+
+
+def test_create_update_candidate_returns_candidate_without_writing(sample_wiki: Path) -> None:
+    result = create_update_candidate(
+        WikiPaths(sample_wiki),
+        page="domains/agent/concepts/example.md",
+        title="Example Page",
+        source="raw/10-AI/example.md",
+        instruction="Add rerank vs hybrid search comparison",
+        new_sections=["## Rerank vs Hybrid Search\n\n- Rerank: ...\n- Hybrid: ..."],
+        new_sources=["raw/10-AI/new-source.md"],
+        new_wikilinks=["domains/agent/concepts/rag-principles"],
+    )
+
+    assert result["candidate"] is True
+    assert result["would_write"] is False
+    assert result["page"] == "domains/agent/concepts/example.md"
+    assert result["title"] == "Example Page"
+    assert result["source"] == "raw/10-AI/example.md"
+    assert result["instruction"] == "Add rerank vs hybrid search comparison"
+    assert "Rerank vs Hybrid Search" in result["suggested_sections"][0]
+    assert result["suggested_sources"] == ["raw/10-AI/new-source.md"]
+    assert result["suggested_wikilinks"] == ["domains/agent/concepts/rag-principles"]
+    assert result["reason_for_update"] is not None
+
+
+def test_create_update_candidate_rejects_nonexistent_page(sample_wiki: Path) -> None:
+    try:
+        create_update_candidate(
+            WikiPaths(sample_wiki),
+            page="domains/agent/concepts/nonexistent.md",
+            title="Missing",
+        )
+    except FileNotFoundError as exc:
+        assert "target page not found" in str(exc)
+    else:
+        raise AssertionError("expected FileNotFoundError")

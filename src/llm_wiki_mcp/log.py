@@ -91,6 +91,41 @@ def _split_header_and_entries(text: str) -> tuple[str, list[str]]:
     return header, entries
 
 
+def create_log_candidate(
+    action: str,
+    subject: str,
+    reason: str,
+    changes: str,
+    impact: str,
+    verification: str,
+    entry_date: str | None = None,
+) -> dict[str, Any]:
+    """Render a log.md entry candidate without writing it.
+
+    Unlike append_log, this returns a proposed log entry for caller review.
+    Use this when the full review package (page candidate + index candidate +
+    log candidate) should be shown to the user before any disk writes.
+    """
+
+    entry = LogEntry(
+        action=action,
+        subject=subject,
+        reason=reason,
+        changes=changes,
+        impact=impact,
+        verification=verification,
+        entry_date=entry_date,
+    )
+    return {
+        "candidate": True,
+        "would_write": False,
+        "date": entry.entry_date or date.today().isoformat(),
+        "action": action,
+        "subject": subject,
+        "content": entry.render(),
+    }
+
+
 def append_log(paths: WikiPaths, entry: LogEntry, retention_entries: int = 120) -> dict[str, Any]:
     """Append an entry to log.md under an exclusive lock and trim retention."""
 

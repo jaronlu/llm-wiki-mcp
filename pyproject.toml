@@ -1,10 +1,10 @@
 [project]
 name = "llm-wiki-mcp"
 version = "0.1.0"
-description = "MCP server for safe, structured access to Jaron's llm-wiki."
+description = "MCP server for building and maintaining Karpathy-style LLM wikis."
 readme = "README.md"
 authors = [
-    { name = "ryan", email = "jr.lu.jobs@gmail.com" }
+    { name = "Jaron Lu" }
 ]
 requires-python = ">=3.11"
 dependencies = [

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from llm_wiki_mcp.lint import run_lint
-from llm_wiki_mcp.log import LogEntry, append_log
+from llm_wiki_mcp.log import LogEntry, append_log, create_log_candidate
 from llm_wiki_mcp.paths import WikiPaths
 
 
@@ -28,6 +28,25 @@ def test_append_log_adds_top_entry_and_trims(sample_wiki: Path) -> None:
     assert "## [2026-01-01] add | old" not in text
 
 
+def test_create_log_candidate_renders_without_writing() -> None:
+    result = create_log_candidate(
+        action="add",
+        subject="test page",
+        reason="testing",
+        changes="new page",
+        impact="new only",
+        verification="unit test",
+        entry_date="2026-07-08",
+    )
+
+    assert result["candidate"] is True
+    assert result["would_write"] is False
+    assert result["action"] == "add"
+    assert result["subject"] == "test page"
+    assert result["date"] == "2026-07-08"
+    assert "## [2026-07-08] add | test page" in result["content"]
+
+
 def test_run_lint_returns_structured_summary(sample_wiki: Path) -> None:
     result = run_lint(WikiPaths(sample_wiki))
     assert result["exit_code"] == 0
@@ -42,3 +61,10 @@ def test_run_lint_timeout_is_structured(sample_wiki: Path) -> None:
     assert result["exit_code"] is None
     assert result["timed_out"] is True
     assert "timed out" in result["errors"][0]
+
+
+def test_run_lint_os_error_is_structured(tmp_path: Path) -> None:
+    result = run_lint(WikiPaths(tmp_path / "missing-wiki"))
+    assert result["exit_code"] is None
+    assert result["timed_out"] is False
+    assert "failed to run scripts/wiki_lint.py" in result["errors"][0]

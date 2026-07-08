@@ -6,11 +6,15 @@ from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
 
+from .bootstrap import init_wiki as init_wiki_project
+from .bootstrap import inspect_wiki as inspect_wiki_project
 from .candidates import create_formal_page_candidate as create_wiki_formal_page_candidate
+from .candidates import create_update_candidate as create_wiki_update_candidate
 from .candidates import update_index_candidate as update_wiki_index_candidate
 from .config import load_config
 from .lint import run_lint as run_wiki_lint
 from .log import LogEntry, append_log as append_wiki_log
+from .log import create_log_candidate as create_wiki_log_candidate
 from .frontmatter import validate_frontmatter as validate_wiki_frontmatter
 from .pages import read_page as read_wiki_page
 from .paths import WikiPaths
@@ -20,8 +24,27 @@ from .related import find_related_pages as find_related_wiki_pages
 from .search import search_wiki as search_wiki_impl
 
 config = load_config()
-paths = WikiPaths(config.wiki_root)
+paths = WikiPaths(
+    config.wiki_root,
+    formal_dirs=config.formal_dirs,
+    raw_dirs=config.raw_dirs,
+    non_formal_dirs=config.non_formal_dirs,
+)
 mcp = FastMCP("llm-wiki-mcp")
+
+
+@mcp.tool(description="Initialize a minimal Karpathy-style LLM Wiki structure without overwriting by default.")
+def init_wiki(root: str | None = None, profile: str = "personal", language: str = "zh") -> dict[str, Any]:
+    """Create missing llm-wiki files/directories for a new wiki root."""
+
+    return init_wiki_project(root or str(paths.root), profile=profile, language=language)
+
+
+@mcp.tool(description="Inspect whether a directory has the minimal llm-wiki structure.")
+def inspect_wiki(root: str | None = None) -> dict[str, Any]:
+    """Inspect a wiki root without mutating files."""
+
+    return inspect_wiki_project(root or str(paths.root))
 
 
 @mcp.tool(description="Search llm-wiki formal pages and/or raw sources with wiki metadata.")
@@ -142,6 +165,55 @@ def update_index_candidate(page: str, title: str, description: str, section_head
         title=title,
         description=description,
         section_heading=section_heading,
+    )
+
+
+@mcp.tool(description="Render an update candidate for an existing formal page without writing it.")
+def create_update_candidate(
+    page: str,
+    title: str,
+    source: str | None = None,
+    instruction: str | None = None,
+    new_sections: list[str] | None = None,
+    new_sources: list[str] | None = None,
+    new_wikilinks: list[str] | None = None,
+    reason_for_update: str | None = None,
+) -> dict[str, Any]:
+    """Generate an update candidate for an existing formal wiki page — not a new page."""
+
+    return create_wiki_update_candidate(
+        paths,
+        page=page,
+        title=title,
+        source=source,
+        instruction=instruction,
+        new_sections=new_sections,
+        new_sources=new_sources,
+        new_wikilinks=new_wikilinks,
+        reason_for_update=reason_for_update,
+    )
+
+
+@mcp.tool(description="Render a log.md entry candidate without writing it.")
+def create_log_candidate(
+    action: str,
+    subject: str,
+    reason: str,
+    changes: str,
+    impact: str,
+    verification: str,
+    entry_date: str | None = None,
+) -> dict[str, Any]:
+    """Generate a log.md entry candidate for caller review, not disk write."""
+
+    return create_wiki_log_candidate(
+        action=action,
+        subject=subject,
+        reason=reason,
+        changes=changes,
+        impact=impact,
+        verification=verification,
+        entry_date=entry_date,
     )
 
 

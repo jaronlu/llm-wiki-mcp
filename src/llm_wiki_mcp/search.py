@@ -9,10 +9,6 @@ from typing import Any, Iterable
 from .frontmatter import parse_markdown, title_from_content
 from .paths import WikiPaths
 
-FORMAL_DIRS = ("domains", "entities")
-RAW_DIRS = ("raw",)
-
-
 def _iter_markdown(root: Path, dirs: Iterable[str]) -> Iterable[Path]:
     """Yield markdown files under selected top-level directories if present."""
 
@@ -118,9 +114,9 @@ def search_wiki(
 
     dirs: list[str] = []
     if scope in {"formal", "all"}:
-        dirs.extend(FORMAL_DIRS)
+        dirs.extend(paths.formal_dirs)
     if scope in {"raw", "all"}:
-        dirs.extend(RAW_DIRS)
+        dirs.extend(paths.raw_dirs)
 
     terms = _query_terms(query)
     phrase = query.casefold().strip()
@@ -133,7 +129,7 @@ def search_wiki(
             continue
         text = file_path.read_text(errors="replace")
         parsed = parse_markdown(text)
-        is_formal = rel.startswith("domains/") or rel.startswith("entities/")
+        is_formal = paths.is_formal_page(file_path)
         if page_type != "any" and parsed.frontmatter.get("type") != page_type:
             continue
 

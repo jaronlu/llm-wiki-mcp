@@ -63,6 +63,16 @@ def run_lint(paths: WikiPaths, timeout_seconds: float = DEFAULT_LINT_TIMEOUT_SEC
             "warnings": [],
             "raw_output": output,
         }
+    except OSError as exc:
+        message = f"failed to run scripts/wiki_lint.py: {exc}"
+        return {
+            "exit_code": None,
+            "timed_out": False,
+            "summary": {},
+            "errors": [message],
+            "warnings": [],
+            "raw_output": "",
+        }
 
     output = proc.stdout or ""
     summary, errors, warnings = _parse_lint_output(output)
