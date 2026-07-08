@@ -1,5 +1,10 @@
 wiki_root: ~/llm-wiki
-allow_write_raw: true
+# Optional bootstrap target for init_wiki when the tool call omits root.
+# Example: /private/tmp/llm-wiki-mcp-smoke
+init_wiki_root:
+# Default deployments should stay read/candidate-first. Set this to true only
+# when the MCP host is allowed to create new immutable raw sources.
+allow_write_raw: false
 allow_write_formal: false
 allow_update_index: false
 allow_modify_schema: false

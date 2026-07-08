@@ -4,7 +4,7 @@ mcp_servers:
     args:
       - "llm-wiki-mcp"
     env:
-      LLM_WIKI_MCP_CONFIG: "/path/to/llm-wiki.yaml"
+      LLM_WIKI_MCP_CONFIG: "/path/to/llm-wiki-mcp/config/config.yaml"
     timeout: 120
     connect_timeout: 60
 
@@ -18,4 +18,4 @@ mcp_servers:
 #       - "run"
 #       - "llm-wiki-mcp"
 #     env:
-#       LLM_WIKI_ROOT: "/path/to/wiki"
+#       LLM_WIKI_MCP_CONFIG: "/path/to/llm-wiki-mcp/config/config.yaml"

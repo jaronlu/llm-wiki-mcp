@@ -3,14 +3,29 @@ name = "llm-wiki-mcp"
 version = "0.1.0"
 description = "MCP server for building and maintaining Karpathy-style LLM wikis."
 readme = "README.md"
+license = "MIT"
 authors = [
     { name = "Jaron Lu" }
 ]
 requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Documentation",
+    "Topic :: Text Processing :: Markup :: Markdown",
+]
 dependencies = [
     "mcp>=1.0.0",
     "pyyaml>=6.0.3",
 ]
+
+[project.urls]
+Homepage = "https://github.com/jaronlu/llm-wiki-mcp"
+Repository = "https://github.com/jaronlu/llm-wiki-mcp"
+Issues = "https://github.com/jaronlu/llm-wiki-mcp/issues"
 
 [project.scripts]
 llm-wiki-mcp = "llm_wiki_mcp:main"
@@ -18,6 +33,7 @@ llm-wiki-mcp = "llm_wiki_mcp:main"
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
+    "ruff>=0.14.0",
 ]
 
 [build-system]

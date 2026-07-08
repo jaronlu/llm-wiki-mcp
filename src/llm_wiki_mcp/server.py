@@ -54,7 +54,8 @@ mcp = FastMCP("llm-wiki-mcp")
 def init_wiki(root: str | None = None, profile: str = "personal", language: str = "zh") -> dict[str, Any]:
     """Create missing llm-wiki files/directories for a new wiki root."""
 
-    return init_wiki_project(root or str(paths.root), profile=profile, language=language)
+    target_root = root or str(config.init_wiki_root or paths.root)
+    return init_wiki_project(target_root, profile=profile, language=language)
 
 
 @mcp.tool(description="Inspect whether a directory has the minimal llm-wiki structure.")

@@ -75,13 +75,40 @@ uv run llm-wiki-mcp
 
 ## Configuration
 
-Set `LLM_WIKI_MCP_CONFIG=/path/to/llm-wiki.yaml` or `LLM_WIKI_ROOT=/path/to/wiki`.
+The server is configuration-first. Do not hardcode private wiki paths in source code, docs, tests, or shared examples.
+
+Recommended local setup:
+
+```bash
+cp config/examples.config.yaml config/config.yaml
+```
+
+Then edit `config/config.yaml` for your machine:
+
+- `wiki_root`: the wiki that search, read, lint, and governance tools operate on.
+- `init_wiki_root`: optional default target for `init_wiki` when the tool call does not pass `root`.
+- `allow_write_raw`: set to `true` only if this MCP host may create new immutable raw sources.
+- `formal_dirs`, `raw_dirs`, `non_formal_dirs`: top-level directory names for your wiki layout.
+- `sensitive`: optional public-draft safety patterns and terms.
+
+`config/config.yaml` is ignored by Git. Commit `config/examples.config.yaml`; keep real local paths and private rules in `config/config.yaml`.
+
+Configuration precedence:
+
+1. Built-in defaults.
+2. Local `config/config.yaml`, then root `config.yaml`, when present.
+3. YAML file from `LLM_WIKI_MCP_CONFIG`, which overrides local config discovery.
+4. `LLM_WIKI_ROOT`, which overrides `wiki_root` from YAML.
+5. `LLM_WIKI_INIT_ROOT`, which overrides `init_wiki_root` from YAML.
+
+Local development with `uv --directory /path/to/llm-wiki-mcp run llm-wiki-mcp` automatically reads `/path/to/llm-wiki-mcp/config/config.yaml` when it exists. For installed package or `uvx` usage, set `LLM_WIKI_MCP_CONFIG=/path/to/config.yaml` explicitly. `init_wiki` also accepts a `root` tool argument; when omitted, it uses `init_wiki_root` first and then falls back to `wiki_root`.
 
 Example config:
 
 ```yaml
 wiki_root: ~/llm-wiki
-allow_write_raw: true
+init_wiki_root: /private/tmp/llm-wiki-mcp-smoke
+allow_write_raw: false
 allow_write_formal: false
 allow_update_index: false
 allow_modify_schema: false
@@ -91,7 +118,40 @@ raw_dirs: [raw]
 non_formal_dirs: [drafts, reading]
 ```
 
-Use placeholders in shared docs/configs. Keep private paths, company names, and personal material in local untracked config files.
+The same structure is available in `config/examples.config.yaml`.
+
+Use placeholders in shared docs/configs. Keep private paths, company names, and personal material in local untracked config files such as `config/config.yaml`.
+
+Set `allow_write_raw: true` only for trusted local hosts that should be able to create new immutable raw sources. Formal pages, index updates, and public exports remain candidate-first.
+
+`wiki_root` is the active wiki used by search/read/lint tools. `init_wiki_root` is only the default bootstrap target for `init_wiki` when the caller does not pass a `root` argument.
+
+## Codex config example
+
+Local development mode:
+
+```toml
+[mcp_servers.llm_wiki]
+command = "uv"
+args = ["--directory", "/path/to/llm-wiki-mcp", "run", "llm-wiki-mcp"]
+startup_timeout_sec = 120
+
+[mcp_servers.llm_wiki.env]
+LLM_WIKI_MCP_CONFIG = "/path/to/llm-wiki-mcp/config/config.yaml"
+```
+
+Single-root override mode:
+
+```toml
+[mcp_servers.llm_wiki]
+command = "uv"
+args = ["--directory", "/path/to/llm-wiki-mcp", "run", "llm-wiki-mcp"]
+startup_timeout_sec = 120
+
+[mcp_servers.llm_wiki.env]
+LLM_WIKI_ROOT = "/path/to/wiki"
+LLM_WIKI_INIT_ROOT = "/private/tmp/llm-wiki-mcp-smoke"
+```
 
 ## Hermes config example
 
@@ -104,7 +164,7 @@ mcp_servers:
     args:
       - "llm-wiki-mcp"
     env:
-      LLM_WIKI_MCP_CONFIG: "/path/to/llm-wiki.yaml"
+      LLM_WIKI_MCP_CONFIG: "/path/to/llm-wiki-mcp/config/config.yaml"
     timeout: 120
     connect_timeout: 60
 ```
@@ -121,7 +181,7 @@ mcp_servers:
       - "run"
       - "llm-wiki-mcp"
     env:
-      LLM_WIKI_ROOT: "/path/to/wiki"
+      LLM_WIKI_MCP_CONFIG: "/path/to/llm-wiki-mcp/config/config.yaml"
     timeout: 120
     connect_timeout: 60
 ```
@@ -129,7 +189,7 @@ mcp_servers:
 ## Safety boundaries
 
 - All paths must resolve under `wiki_root`.
-- `raw/` writes are strictly create-only; existing raw files are never overwritten.
+- Raw writes are disabled by default. When explicitly enabled, `raw/` writes are strictly create-only and existing raw files are never overwritten.
 - Formal page writes, `index.md` updates, migration, and public export are candidate-first.
 - Source digest tracking uses `.llm-wiki/source-manifest.json`; it does not modify formal page frontmatter.
 - Shared docs/examples use placeholders; private local config should stay untracked.

@@ -117,6 +117,32 @@ def test_update_index_candidate_inserts_link_under_existing_heading_without_writ
     assert "new-concept" not in index_path.read_text()
 
 
+def test_update_index_candidate_matches_nested_heading_text(sample_wiki: Path) -> None:
+    index_path = sample_wiki / "index.md"
+    index_path.write_text(
+        "# Index\n\n"
+        "## Agent\n\n"
+        "### References\n\n"
+        "- [[domains/agent/references/example-reference]] — Example reference\n\n"
+        "### Summaries\n\n"
+        "- [[domains/agent/summaries/example-summary]] — Example summary\n"
+    )
+
+    result = update_index_candidate(
+        WikiPaths(sample_wiki),
+        page="domains/agent/references/new-reference.md",
+        title="New Reference",
+        description="Reusable MCP reference",
+        section_heading="References",
+    )
+
+    new_entry = "- [[domains/agent/references/new-reference]] — Reusable MCP reference"
+    assert result["inserted"] is True
+    assert result["content"].count("### References") == 1
+    assert "\n## References\n" not in result["content"]
+    assert result["content"].index(new_entry) < result["content"].index("### Summaries")
+
+
 def test_update_index_candidate_detects_alias_and_anchor_links(sample_wiki: Path) -> None:
     index_path = sample_wiki / "index.md"
     index_path.write_text(

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from pathlib import Path
+import re
+
 import pytest
 
 from llm_wiki_mcp.server import mcp
@@ -41,6 +44,18 @@ async def test_all_tools_are_registered() -> None:
     assert "knowledge_health_review" in names
     assert "audit_wiki_structure" in names
     assert "standardize_page_candidate" in names
+
+
+@pytest.mark.anyio("asyncio")
+async def test_readme_tool_list_matches_registered_tools() -> None:
+    tools = await mcp.list_tools()
+    registered = {tool.name for tool in tools}
+    readme = (Path(__file__).resolve().parents[1] / "README.md").read_text()
+    tool_section = readme.split("## MCP tools", 1)[1].split("## Development", 1)[0]
+    documented = set(re.findall(r"^- `([a-z_]+)`", tool_section, flags=re.MULTILINE))
+
+    assert documented
+    assert documented <= registered
 
 
 @pytest.mark.anyio("asyncio")

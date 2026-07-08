@@ -163,19 +163,39 @@ def _indexed_slugs(index_text: str) -> set[str]:
     return slugs
 
 
+def _heading_match(line: str) -> tuple[int, str] | None:
+    """Return heading level and text for a Markdown ATX heading line."""
+
+    match = re.match(r"^(#{1,6})\s+(.+?)\s*#*\s*$", line)
+    if not match:
+        return None
+    return len(match.group(1)), match.group(2).strip()
+
+
 def _insert_under_heading(index_text: str, heading: str, entry: str) -> tuple[str, bool]:
     """Insert an index entry under a markdown heading, creating it if needed."""
 
     lines = index_text.splitlines()
-    heading_line = f"## {heading}"
-    try:
-        heading_idx = lines.index(heading_line)
-    except ValueError:
+    normalized_heading = heading.strip().casefold()
+    heading_idx: int | None = None
+    heading_level: int | None = None
+    for idx, line in enumerate(lines):
+        parsed = _heading_match(line)
+        if parsed and parsed[1].casefold() == normalized_heading:
+            heading_idx = idx
+            heading_level = parsed[0]
+            break
+
+    if heading_idx is None or heading_level is None:
+        heading_line = f"## {heading.strip()}"
         suffix = "" if index_text.endswith("\n") else "\n"
         return f"{index_text}{suffix}\n{heading_line}\n\n{entry}\n", True
 
     insert_idx = heading_idx + 1
-    while insert_idx < len(lines) and not lines[insert_idx].startswith("## "):
+    while insert_idx < len(lines):
+        parsed = _heading_match(lines[insert_idx])
+        if parsed and parsed[0] <= heading_level:
+            break
         insert_idx += 1
     while insert_idx > heading_idx + 1 and lines[insert_idx - 1] == "":
         insert_idx -= 1
