@@ -1,0 +1,6 @@
+wiki_root:***REMOVED***
+allow_write_raw: true
+allow_write_formal: false
+allow_update_index: false
+allow_modify_schema: false
+log_retention_entries: 120

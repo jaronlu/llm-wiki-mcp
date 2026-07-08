@@ -1,0 +1,10 @@
+mcp_servers:
+  llm_wiki:
+    command: "uv"
+    args:
+      - "--directory"
+      - "PROJECT_ROOT"
+      - "run"
+      - "llm-wiki-mcp"
+    timeout: 120
+    connect_timeout: 60

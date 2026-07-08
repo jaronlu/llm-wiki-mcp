@@ -1,0 +1,25 @@
+[project]
+name = "llm-wiki-mcp"
+version = "0.1.0"
+description = "MCP server for safe, structured access to Jaron's llm-wiki."
+readme = "README.md"
+authors = [
+    { name = "ryan", email = "jr.lu.jobs@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.0.0",
+    "pyyaml>=6.0.3",
+]
+
+[project.scripts]
+llm-wiki-mcp = "llm_wiki_mcp:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.5,<0.10.0"]
+build-backend = "uv_build"
