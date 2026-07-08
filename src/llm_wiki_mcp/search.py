@@ -1,3 +1,5 @@
+"""Text search over formal wiki pages and raw sources."""
+
 from __future__ import annotations
 
 import re
@@ -12,6 +14,8 @@ RAW_DIRS = ("raw",)
 
 
 def _iter_markdown(root: Path, dirs: Iterable[str]) -> Iterable[Path]:
+    """Yield markdown files under selected top-level directories if present."""
+
     for dirname in dirs:
         base = root / dirname
         if not base.exists():
@@ -20,6 +24,8 @@ def _iter_markdown(root: Path, dirs: Iterable[str]) -> Iterable[Path]:
 
 
 def _load_indexed_slugs(paths: WikiPaths) -> set[str]:
+    """Return formal page slugs registered in index.md wikilinks."""
+
     index = paths.root / "index.md"
     if not index.exists():
         return set()
@@ -28,6 +34,8 @@ def _load_indexed_slugs(paths: WikiPaths) -> set[str]:
 
 
 def _matches_domain(paths: WikiPaths, file_path: Path, domain: str | None) -> bool:
+    """Return whether a formal page belongs to the requested domain filter."""
+
     if not domain:
         return True
     rel_parts = Path(paths.rel(file_path)).parts
@@ -35,6 +43,8 @@ def _matches_domain(paths: WikiPaths, file_path: Path, domain: str | None) -> bo
 
 
 def _snippet(text: str, terms: list[str], max_len: int = 220) -> str:
+    """Build a compact snippet around the first matched query term."""
+
     lower = text.lower()
     positions = [lower.find(term) for term in terms if term]
     positions = [pos for pos in positions if pos >= 0]
@@ -52,6 +62,8 @@ def search_wiki(
     page_type: str = "any",
     limit: int = 20,
 ) -> dict[str, Any]:
+    """Search selected wiki zones and return metadata-rich result objects."""
+
     if not query.strip():
         raise ValueError("query must not be empty")
     scope = scope.lower()

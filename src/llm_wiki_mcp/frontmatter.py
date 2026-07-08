@@ -1,3 +1,5 @@
+"""Markdown frontmatter parsing utilities."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -8,12 +10,16 @@ import yaml
 
 @dataclass(frozen=True)
 class ParsedMarkdown:
+    """A markdown document split into parsed YAML frontmatter and body content."""
+
     frontmatter: dict[str, Any]
     content: str
     has_frontmatter: bool
 
 
 def parse_markdown(text: str) -> ParsedMarkdown:
+    """Parse leading YAML frontmatter from markdown text when present."""
+
     if not text.startswith("---\n"):
         return ParsedMarkdown(frontmatter={}, content=text, has_frontmatter=False)
 
@@ -31,6 +37,8 @@ def parse_markdown(text: str) -> ParsedMarkdown:
 
 
 def title_from_content(content: str) -> str | None:
+    """Return the first H1 heading from markdown content, if one exists."""
+
     for line in content.splitlines():
         if line.startswith("# "):
             return line[2:].strip()

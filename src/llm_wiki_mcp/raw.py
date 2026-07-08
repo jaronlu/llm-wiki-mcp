@@ -1,3 +1,5 @@
+"""Read and create immutable raw source documents under `raw/`."""
+
 from __future__ import annotations
 
 import os
@@ -9,6 +11,8 @@ from .paths import WikiPathError, WikiPaths
 
 
 def _fsync_directory(path: str) -> None:
+    """Best-effort fsync for a directory after atomic filesystem updates."""
+
     try:
         dir_fd = os.open(path, os.O_RDONLY)
     except OSError:
@@ -25,6 +29,8 @@ def read_raw_source(
     offset: int = 0,
     limit: int = DEFAULT_CONTENT_LIMIT,
 ) -> dict[str, Any]:
+    """Read a raw source file with pagination metadata and immutable marker."""
+
     file_path = paths.require_under(path, "raw")
     if not file_path.is_file():
         raise FileNotFoundError(f"File not found: {paths.rel(file_path)}")
@@ -38,6 +44,7 @@ def read_raw_source(
 
 def create_raw_source(paths: WikiPaths, path: str, content: str) -> dict[str, Any]:
     """Create a raw source atomically without overwriting existing files."""
+
     file_path = paths.require_under(path, "raw")
     rel = paths.rel(file_path)
     if not rel.endswith(".md"):

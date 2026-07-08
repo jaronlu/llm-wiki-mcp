@@ -1,3 +1,5 @@
+"""Formal wiki page readers and wikilink extraction."""
+
 from __future__ import annotations
 
 import re
@@ -11,6 +13,8 @@ WIKILINK_RE = re.compile(r"\[\[([^\]|#]+)")
 
 
 def extract_wikilinks(text: str) -> list[str]:
+    """Extract unique Obsidian-style wikilink targets from markdown text."""
+
     seen: set[str] = set()
     links: list[str] = []
     for match in WIKILINK_RE.finditer(text):
@@ -27,6 +31,8 @@ def read_page(
     offset: int = 0,
     limit: int = DEFAULT_CONTENT_LIMIT,
 ) -> dict[str, Any]:
+    """Read a formal wiki page or slug with frontmatter and bounded content."""
+
     file_path = paths.require_formal_page(page)
     text = file_path.read_text(errors="replace")
     parsed = parse_markdown(text)

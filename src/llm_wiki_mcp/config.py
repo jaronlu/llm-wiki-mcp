@@ -1,3 +1,5 @@
+"""Configuration loading for the llm-wiki MCP server."""
+
 from __future__ import annotations
 
 import os
@@ -12,6 +14,8 @@ DEFAULT_WIKI_ROOT = Path("PROJECT_WIKI_ROOT")
 
 @dataclass(frozen=True)
 class Config:
+    """Runtime configuration and permission switches for the MCP server."""
+
     wiki_root: Path = DEFAULT_WIKI_ROOT
     allow_write_raw: bool = True
     allow_write_formal: bool = False
@@ -21,6 +25,8 @@ class Config:
 
 
 def _as_bool(value: Any, default: bool) -> bool:
+    """Coerce YAML/env values into booleans while preserving a default for nulls."""
+
     if value is None:
         return default
     if isinstance(value, bool):
@@ -31,7 +37,8 @@ def _as_bool(value: Any, default: bool) -> bool:
 
 
 def load_config(config_path: str | Path | None = None) -> Config:
-    """Load server config from YAML and environment variables."""
+    """Load config from defaults, optional YAML, then environment overrides."""
+
     data: dict[str, Any] = {}
     path_value = config_path or os.environ.get("LLM_WIKI_MCP_CONFIG")
     if path_value:

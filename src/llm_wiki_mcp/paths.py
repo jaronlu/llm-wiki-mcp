@@ -1,3 +1,5 @@
+"""Path normalization and root-boundary enforcement for llm-wiki files."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -10,12 +12,18 @@ class WikiPathError(ValueError):
 
 @dataclass(frozen=True)
 class WikiPaths:
+    """Resolve and validate paths relative to a single llm-wiki root."""
+
     root: Path
 
     def __post_init__(self) -> None:
+        """Normalize the configured wiki root once at construction time."""
+
         object.__setattr__(self, "root", self.root.expanduser().resolve())
 
     def resolve(self, path: str | Path) -> Path:
+        """Resolve a user path and reject anything outside the wiki root."""
+
         candidate = Path(path).expanduser()
         if not candidate.is_absolute():
             candidate = self.root / candidate
@@ -25,21 +33,29 @@ class WikiPaths:
         return resolved
 
     def rel(self, path: str | Path) -> str:
+        """Return a root-relative POSIX path after boundary validation."""
+
         return self.resolve(path).relative_to(self.root).as_posix()
 
     def markdown_path(self, path: str | Path) -> str | Path:
+        """Append `.md` to slug-like paths while leaving explicit suffixes alone."""
+
         candidate = Path(path)
         if candidate.suffix:
             return path
         return Path(f"{path}.md")
 
     def require_existing_file(self, path: str | Path) -> Path:
+        """Resolve a path and require that it exists as a regular file."""
+
         resolved = self.resolve(path)
         if not resolved.is_file():
             raise FileNotFoundError(f"File not found: {self.rel(resolved)}")
         return resolved
 
     def require_under(self, path: str | Path, prefix: str) -> Path:
+        """Resolve a path and require that it stays under a wiki subdirectory."""
+
         resolved = self.resolve(path)
         rel = resolved.relative_to(self.root).as_posix()
         clean_prefix = prefix.strip("/") + "/"
@@ -48,10 +64,14 @@ class WikiPaths:
         return resolved
 
     def is_formal_page(self, path: str | Path) -> bool:
+        """Return whether a path belongs to the formal wiki page zones."""
+
         rel = self.rel(path)
         return rel.startswith("domains/") or rel.startswith("entities/")
 
     def require_formal_page(self, path: str | Path) -> Path:
+        """Resolve a formal wiki page path or slug and require an existing markdown file."""
+
         normalized = self.markdown_path(path)
         resolved = self.resolve(normalized)
         if not self.is_formal_page(resolved):

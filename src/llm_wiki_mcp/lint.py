@@ -1,3 +1,5 @@
+"""Wrapper for llm-wiki's repository lint script."""
+
 from __future__ import annotations
 
 import re
@@ -11,6 +13,8 @@ DEFAULT_LINT_TIMEOUT_SECONDS = 60.0
 
 
 def _parse_lint_output(output: str) -> tuple[dict[str, int], list[str], list[str]]:
+    """Parse wiki_lint.py stdout into summary, error, and warning sections."""
+
     summary: dict[str, int] = {}
     errors: list[str] = []
     warnings: list[str] = []
@@ -36,6 +40,8 @@ def _parse_lint_output(output: str) -> tuple[dict[str, int], list[str], list[str
 
 
 def run_lint(paths: WikiPaths, timeout_seconds: float = DEFAULT_LINT_TIMEOUT_SECONDS) -> dict[str, Any]:
+    """Run `scripts/wiki_lint.py` and return non-zero results as structured data."""
+
     try:
         proc = subprocess.run(
             ["python3", "scripts/wiki_lint.py"],

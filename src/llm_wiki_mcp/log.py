@@ -1,3 +1,5 @@
+"""Structured rolling updates for `log.md`."""
+
 from __future__ import annotations
 
 import fcntl
@@ -13,6 +15,8 @@ from .paths import WikiPaths
 
 @dataclass(frozen=True)
 class LogEntry:
+    """Structured fields required for a single llm-wiki log entry."""
+
     action: str
     subject: str
     reason: str
@@ -22,6 +26,8 @@ class LogEntry:
     entry_date: str | None = None
 
     def render(self) -> str:
+        """Render the entry in the repository's markdown log format."""
+
         when = self.entry_date or date.today().isoformat()
         return "\n".join([
             f"## [{when}] {self.action} | {self.subject}",
@@ -34,6 +40,8 @@ class LogEntry:
 
 
 def _fsync_directory(path: Path) -> None:
+    """Best-effort fsync for a directory after replacing a file inside it."""
+
     try:
         dir_fd = os.open(path, os.O_RDONLY)
     except OSError:
@@ -45,6 +53,8 @@ def _fsync_directory(path: Path) -> None:
 
 
 def _atomic_write_text(path: Path, content: str) -> None:
+    """Atomically replace a text file using temp-write, fsync, and rename."""
+
     fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
@@ -59,6 +69,8 @@ def _atomic_write_text(path: Path, content: str) -> None:
 
 
 def _split_header_and_entries(text: str) -> tuple[str, list[str]]:
+    """Split log.md into its static header and individual dated entries."""
+
     lines = text.splitlines()
     first_entry = next((idx for idx, line in enumerate(lines) if line.startswith("## [")), len(lines))
     header = "\n".join(lines[:first_entry]).rstrip() + "\n\n"
@@ -80,6 +92,8 @@ def _split_header_and_entries(text: str) -> tuple[str, list[str]]:
 
 
 def append_log(paths: WikiPaths, entry: LogEntry, retention_entries: int = 120) -> dict[str, Any]:
+    """Append an entry to log.md under an exclusive lock and trim retention."""
+
     log_path = paths.require_existing_file("log.md")
     lock_path = log_path.with_name(f"{log_path.name}.lock")
     with lock_path.open("a+") as lock_file:
