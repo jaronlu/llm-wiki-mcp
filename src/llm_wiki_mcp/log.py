@@ -6,7 +6,7 @@ import fcntl
 import os
 import tempfile
 from dataclasses import dataclass
-from datetime import date
+from datetime import date as local_date
 from pathlib import Path
 from typing import Any
 
@@ -28,7 +28,7 @@ class LogEntry:
     def render(self) -> str:
         """Render the entry in the repository's markdown log format."""
 
-        when = self.entry_date or date.today().isoformat()
+        when = self.entry_date or local_date.today().isoformat()
         return "\n".join([
             f"## [{when}] {self.action} | {self.subject}",
             f"- 原因: {self.reason}",
@@ -98,7 +98,7 @@ def create_log_candidate(
     changes: str,
     impact: str,
     verification: str,
-    entry_date: str | None = None,
+    date: str | None = None,
 ) -> dict[str, Any]:
     """Render a log.md entry candidate without writing it.
 
@@ -114,12 +114,12 @@ def create_log_candidate(
         changes=changes,
         impact=impact,
         verification=verification,
-        entry_date=entry_date,
+        entry_date=date,
     )
     return {
         "candidate": True,
         "would_write": False,
-        "date": entry.entry_date or date.today().isoformat(),
+        "date": entry.entry_date or local_date.today().isoformat(),
         "action": action,
         "subject": subject,
         "content": entry.render(),

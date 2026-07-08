@@ -39,8 +39,15 @@ def _parse_lint_output(output: str) -> tuple[dict[str, int], list[str], list[str
     return summary, errors, warnings
 
 
-def run_lint(paths: WikiPaths, timeout_seconds: float = DEFAULT_LINT_TIMEOUT_SECONDS) -> dict[str, Any]:
+def run_lint(
+    paths: WikiPaths,
+    mode: str = "full",
+    timeout_seconds: float = DEFAULT_LINT_TIMEOUT_SECONDS,
+) -> dict[str, Any]:
     """Run `scripts/wiki_lint.py` and return non-zero results as structured data."""
+
+    if mode != "full":
+        raise ValueError("mode must be 'full'")
 
     try:
         proc = subprocess.run(
@@ -79,6 +86,8 @@ def run_lint(paths: WikiPaths, timeout_seconds: float = DEFAULT_LINT_TIMEOUT_SEC
     return {
         "exit_code": proc.returncode,
         "timed_out": False,
+        "formal_pages": summary.get("formal_pages", 0),
+        "catalog_pages": summary.get("catalog_pages", 0),
         "summary": summary,
         "errors": errors,
         "warnings": warnings,

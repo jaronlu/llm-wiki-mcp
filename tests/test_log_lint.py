@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from llm_wiki_mcp.lint import run_lint
@@ -36,7 +37,7 @@ def test_create_log_candidate_renders_without_writing() -> None:
         changes="new page",
         impact="new only",
         verification="unit test",
-        entry_date="2026-07-08",
+        date="2026-07-08",
     )
 
     assert result["candidate"] is True
@@ -48,9 +49,11 @@ def test_create_log_candidate_renders_without_writing() -> None:
 
 
 def test_run_lint_returns_structured_summary(sample_wiki: Path) -> None:
-    result = run_lint(WikiPaths(sample_wiki))
+    result = run_lint(WikiPaths(sample_wiki), mode="full")
     assert result["exit_code"] == 0
     assert result["timed_out"] is False
+    assert result["formal_pages"] == 1
+    assert result["catalog_pages"] == 1
     assert result["summary"]["formal_pages"] == 1
     assert result["errors"] == []
 
@@ -68,3 +71,29 @@ def test_run_lint_os_error_is_structured(tmp_path: Path) -> None:
     assert result["exit_code"] is None
     assert result["timed_out"] is False
     assert "failed to run scripts/wiki_lint.py" in result["errors"][0]
+
+
+def test_append_log_concurrent_writes_keep_all_entries(sample_wiki: Path) -> None:
+    paths = WikiPaths(sample_wiki)
+
+    def write_entry(index: int) -> None:
+        append_log(
+            paths,
+            LogEntry(
+                action="add",
+                subject=f"entry {index}",
+                reason="test",
+                changes=f"entry {index}",
+                impact="log only",
+                verification="unit test",
+                entry_date="2026-02-01",
+            ),
+            retention_entries=10,
+        )
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        list(executor.map(write_entry, range(4)))
+
+    text = (sample_wiki / "log.md").read_text()
+    for index in range(4):
+        assert f"## [2026-02-01] add | entry {index}" in text

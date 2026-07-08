@@ -10,7 +10,6 @@ from .frontmatter import parse_markdown, title_from_content
 from .paths import WikiPathError, WikiPaths
 
 TOKEN_RE = re.compile(r"[\w\u4e00-\u9fff]+")
-FORMAL_DIRS = ("domains", "entities")
 MAX_RELATED_LIMIT = 50
 
 
@@ -21,10 +20,10 @@ def _tokens(text: str) -> set[str]:
 
 
 def _iter_formal_pages(paths: WikiPaths) -> list[Path]:
-    """Return formal markdown pages under domains/ and entities/."""
+    """Return formal markdown pages under configured formal directories."""
 
     files: list[Path] = []
-    for dirname in FORMAL_DIRS:
+    for dirname in paths.formal_dirs:
         base = paths.root / dirname
         if not base.exists():
             continue
@@ -61,6 +60,15 @@ def _page_document(paths: WikiPaths, file_path: Path) -> dict[str, Any]:
     }
 
 
+def _matches_domain(paths: WikiPaths, file_path: Path, domain: str | None) -> bool:
+    """Return whether a page belongs to the requested domains/<domain>/ zone."""
+
+    if not domain:
+        return True
+    rel_parts = Path(paths.rel(file_path)).parts
+    return len(rel_parts) >= 3 and rel_parts[0] == "domains" and rel_parts[1] == domain
+
+
 def _score(candidate: dict[str, Any], query_tokens: set[str], query_tags: set[str]) -> tuple[int, list[str]]:
     """Score a candidate by token and tag overlap."""
 
@@ -73,38 +81,27 @@ def _score(candidate: dict[str, Any], query_tokens: set[str], query_tags: set[st
 
 def find_related_pages(
     paths: WikiPaths,
-    page: str | None = None,
-    query: str | None = None,
+    topic: str,
+    domain: str | None = None,
     limit: int = 10,
 ) -> dict[str, Any]:
-    """Find formal pages related to a source page or free-text query."""
+    """Find formal pages related to a topic before creating or updating pages."""
 
-    if bool(page) == bool(query):
-        raise ValueError("provide exactly one of page or query")
+    if not topic.strip():
+        raise ValueError("topic must not be empty")
     if limit <= 0:
         raise ValueError("limit must be positive")
     if limit > MAX_RELATED_LIMIT:
         raise ValueError(f"limit must be <= {MAX_RELATED_LIMIT}")
 
-    source_path: str | None = None
-    query_tags: set[str] = set()
-    if page:
-        source = _page_document(paths, paths.require_formal_page(page))
-        source_path = source["path"]
-        query_tokens = set(source["tokens"])
-        query_tags = {str(tag).lower() for tag in source.get("tags", [])}
-        mode = "page"
-        query_text = None
-    else:
-        query_text = query or ""
-        query_tokens = _tokens(query_text)
-        mode = "query"
+    query_tokens = _tokens(topic)
+    query_tags: set[str] = {domain.lower()} if domain else set()
 
     results: list[dict[str, Any]] = []
     for file_path in _iter_formal_pages(paths):
-        candidate = _page_document(paths, file_path)
-        if candidate["path"] == source_path:
+        if not _matches_domain(paths, file_path, domain):
             continue
+        candidate = _page_document(paths, file_path)
         score, matched_terms = _score(candidate, query_tokens, query_tags)
         if score <= 0:
             continue
@@ -114,6 +111,7 @@ def find_related_pages(
             "type": candidate["type"],
             "tags": candidate["tags"],
             "score": score,
+            "reason": f"matched: {', '.join(matched_terms)}" if matched_terms else "matched topic",
             "matched_terms": matched_terms,
             "snippet": candidate["snippet"],
         })
@@ -121,9 +119,8 @@ def find_related_pages(
     results.sort(key=lambda item: (-item["score"], item["path"]))
     kept = results[:limit]
     return {
-        "mode": mode,
-        "source_path": source_path,
-        "query": query_text,
+        "topic": topic,
+        "domain": domain,
         "count": len(kept),
         "results": kept,
     }

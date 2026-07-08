@@ -52,12 +52,12 @@ def search_wiki(
     query: str,
     scope: Literal["formal", "raw", "all"] = "formal",
     domain: str | None = None,
-    page_type: str = "any",
+    type: str = "any",
     limit: int = 20,
 ) -> dict[str, Any]:
     """Search formal pages and/or raw sources and return structured metadata."""
 
-    return search_wiki_impl(paths, query=query, scope=scope, domain=domain, page_type=page_type, limit=limit)
+    return search_wiki_impl(paths, query=query, scope=scope, domain=domain, page_type=type, limit=limit)
 
 
 @mcp.tool(description="Read a formal llm-wiki page and return frontmatter, content, and wikilinks.")
@@ -91,7 +91,7 @@ def append_log(
     changes: str,
     impact: str,
     verification: str,
-    entry_date: str | None = None,
+    date: str | None = None,
 ) -> dict[str, Any]:
     """Append a structured log.md entry using the repository log format."""
 
@@ -102,7 +102,7 @@ def append_log(
         changes=changes,
         impact=impact,
         verification=verification,
-        entry_date=entry_date,
+        entry_date=date,
     )
     return append_wiki_log(paths, entry, retention_entries=config.log_retention_entries)
 
@@ -114,15 +114,15 @@ def validate_frontmatter(page: str) -> dict[str, Any]:
     return validate_wiki_frontmatter(paths, page)
 
 
-@mcp.tool(description="Find formal wiki pages related to a page or free-text query.")
+@mcp.tool(description="Find formal wiki pages related to a topic and optional domain.")
 def find_related_pages(
-    page: str | None = None,
-    query: str | None = None,
+    topic: str,
+    domain: str | None = None,
     limit: int = 10,
 ) -> dict[str, Any]:
     """Find metadata-rich related formal pages using lightweight local scoring."""
 
-    return find_related_wiki_pages(paths, page=page, query=query, limit=limit)
+    return find_related_wiki_pages(paths, topic=topic, domain=domain, limit=limit)
 
 
 @mcp.tool(description="Render a formal page markdown candidate without writing it.")
@@ -202,7 +202,7 @@ def create_log_candidate(
     changes: str,
     impact: str,
     verification: str,
-    entry_date: str | None = None,
+    date: str | None = None,
 ) -> dict[str, Any]:
     """Generate a log.md entry candidate for caller review, not disk write."""
 
@@ -213,15 +213,15 @@ def create_log_candidate(
         changes=changes,
         impact=impact,
         verification=verification,
-        entry_date=entry_date,
+        date=date,
     )
 
 
 @mcp.tool(description="Run python3 scripts/wiki_lint.py and return structured lint results.")
-def run_lint(timeout_seconds: float = 60.0) -> dict[str, Any]:
+def run_lint(mode: str = "full", timeout_seconds: float = 60.0) -> dict[str, Any]:
     """Run the wiki lint script with a timeout and structured error output."""
 
-    return run_wiki_lint(paths, timeout_seconds=timeout_seconds)
+    return run_wiki_lint(paths, mode=mode, timeout_seconds=timeout_seconds)
 
 
 def main() -> None:

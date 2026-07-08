@@ -8,10 +8,24 @@ from llm_wiki_mcp.search import search_wiki
 
 
 def test_read_page_parses_frontmatter_and_links(sample_wiki: Path) -> None:
+    (sample_wiki / "domains/agent/concepts/backlink.md").write_text(
+        "---\n"
+        "title: Backlink Page\n"
+        "created: 2026-01-01\n"
+        "updated: 2026-01-01\n"
+        "type: concept\n"
+        "tags: [ai, agent]\n"
+        "sources: [raw/10-AI/example.md]\n"
+        "confidence: medium\n"
+        "---\n\n"
+        "# Backlink Page\n\nSee [[domains/agent/concepts/example]].\n"
+    )
     result = read_page(WikiPaths(sample_wiki), "domains/agent/concepts/example.md")
     assert result["frontmatter"]["title"] == "Example Page"
     assert result["frontmatter"]["type"] == "concept"
+    assert result["warnings"] == []
     assert result["wikilinks"] == ["domains/agent/concepts/other"]
+    assert result["backlinks"] == ["domains/agent/concepts/backlink.md"]
 
 
 def test_read_page_accepts_slug_without_md(sample_wiki: Path) -> None:

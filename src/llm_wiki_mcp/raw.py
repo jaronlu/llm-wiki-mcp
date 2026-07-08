@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import tempfile
+from datetime import datetime, timezone
 from typing import Any
 
 from .content import DEFAULT_CONTENT_LIMIT, slice_content
@@ -67,4 +68,9 @@ def create_raw_source(paths: WikiPaths, path: str, content: str) -> dict[str, An
         if os.path.exists(tmp_name):
             os.unlink(tmp_name)
 
-    return {"created": True, "path": rel, "bytes": len(encoded), "overwritten": False}
+    return {
+        "created": True,
+        "path": rel,
+        "bytes": len(encoded),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
