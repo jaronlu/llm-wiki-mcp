@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
 
+from .candidates import create_formal_page_candidate as create_wiki_formal_page_candidate
+from .candidates import update_index_candidate as update_wiki_index_candidate
 from .config import load_config
 from .lint import run_lint as run_wiki_lint
 from .log import LogEntry, append_log as append_wiki_log
@@ -98,6 +100,49 @@ def find_related_pages(
     """Find metadata-rich related formal pages using lightweight local scoring."""
 
     return find_related_wiki_pages(paths, page=page, query=query, limit=limit)
+
+
+@mcp.tool(description="Render a formal page markdown candidate without writing it.")
+def create_formal_page_candidate(
+    path: str,
+    title: str,
+    page_type: str,
+    tags: list[str],
+    sources: list[str],
+    confidence: str,
+    body: str,
+    summary: str | None = None,
+    created: str | None = None,
+    updated: str | None = None,
+) -> dict[str, Any]:
+    """Create a candidate formal wiki page for caller review, not disk write."""
+
+    return create_wiki_formal_page_candidate(
+        paths,
+        path=path,
+        title=title,
+        page_type=page_type,
+        tags=tags,
+        sources=sources,
+        confidence=confidence,
+        body=body,
+        summary=summary,
+        created=created,
+        updated=updated,
+    )
+
+
+@mcp.tool(description="Render an index.md update candidate without writing it.")
+def update_index_candidate(page: str, title: str, description: str, section_heading: str) -> dict[str, Any]:
+    """Create a candidate index.md update for caller review, not disk write."""
+
+    return update_wiki_index_candidate(
+        paths,
+        page=page,
+        title=title,
+        description=description,
+        section_heading=section_heading,
+    )
 
 
 @mcp.tool(description="Run python3 scripts/wiki_lint.py and return structured lint results.")
