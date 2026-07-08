@@ -8,7 +8,8 @@ An LLM Wiki keeps immutable source material in `raw/`, compiles durable knowledg
 
 1. **Start from zero** — initialize a minimal wiki structure with `init_wiki`.
 2. **Maintain an existing wiki** — inspect structure, search pages, create candidates, update logs, and run lint.
-3. **Keep the open-source repo clean** — default config, docs, examples, and tests use placeholders instead of private local paths or personal data.
+3. **Govern long-running knowledge** — detect new sources, review stale or duplicate topics, and generate health reports.
+4. **Keep the open-source repo clean** — default config, docs, examples, and tests use placeholders instead of private local paths or personal data.
 
 ## MCP tools
 
@@ -20,7 +21,7 @@ An LLM Wiki keeps immutable source material in `raw/`, compiles durable knowledg
 ### Core operations
 
 - `search_wiki` — search formal wiki pages and/or raw sources with metadata and score.
-- `read_page` — read a formal page and parse frontmatter.
+- `read_page` — read a formal page, frontmatter, wikilinks, and backlinks.
 - `read_raw_source` — read immutable source material under `raw/`.
 - `create_raw_source` — create a new raw source; existing files are never overwritten.
 - `append_log` — write a structured rolling `log.md` entry and trim old entries.
@@ -29,11 +30,40 @@ An LLM Wiki keeps immutable source material in `raw/`, compiles durable knowledg
 ### Candidate tools
 
 - `validate_frontmatter` — validate required formal-page frontmatter fields.
-- `find_related_pages` — find formal pages related to a page or free-text query.
+- `find_related_pages` — find formal pages related to a topic and optional domain.
 - `create_formal_page_candidate` — render a formal page candidate without writing it.
 - `create_update_candidate` — render an update candidate for an existing formal page without writing it.
 - `update_index_candidate` — render an `index.md` update candidate without writing it.
 - `create_log_candidate` — render a `log.md` entry candidate without writing it.
+
+### Lifecycle and retrieval
+
+- `semantic_search` — search formal/raw chunks with a deterministic local token-vector baseline.
+- `classify_source_candidate` — classify a raw source as raw, draft, formal candidate, update existing, or ignore.
+- `compile_raw_to_formal_draft` — compile one raw source into a reviewable formal-page draft.
+- `suggest_wikilinks` — suggest formal-page wikilinks for candidate content.
+
+### Source manifests and incremental updates
+
+- `detect_new_source` — detect raw sources that are new or changed since the sidecar manifest.
+- `find_referencing_pages` — find formal pages that cite a raw source in `sources`.
+- `update_source_manifest` — update `.llm-wiki/source-manifest.json` without modifying page frontmatter.
+
+### Public draft safety
+
+- `write_public_draft` — clean frontmatter and wikilinks into a public-site draft candidate without publishing.
+- `validate_public_safety` — check public candidate content for private paths, secrets, interview/salary material, and raw references.
+
+### Long-term governance
+
+- `find_uncompiled_sources` — find raw sources not referenced by formal pages.
+- `find_duplicate_topics` — find overlapping formal topics.
+- `find_stale_pages` — find old pages or pages mentioning deprecated/removed APIs.
+- `find_low_confidence_pages` — find pages marked `confidence: low`.
+- `suggest_merge_candidates` — propose merge candidates without deleting or rewriting pages.
+- `knowledge_health_review` — summarize lint, uncompiled sources, duplicates, stale pages, and low-confidence pages.
+- `audit_wiki_structure` — audit structure and standardization gaps without writing.
+- `standardize_page_candidate` — render a frontmatter-standardized page candidate without writing.
 
 ## Development
 
@@ -101,5 +131,6 @@ mcp_servers:
 - All paths must resolve under `wiki_root`.
 - `raw/` writes are strictly create-only; existing raw files are never overwritten.
 - Formal page writes, `index.md` updates, migration, and public export are candidate-first.
+- Source digest tracking uses `.llm-wiki/source-manifest.json`; it does not modify formal page frontmatter.
 - Shared docs/examples use placeholders; private local config should stay untracked.
 - `run_lint` returns lint errors as structured data instead of treating non-zero lint exit as MCP transport failure.

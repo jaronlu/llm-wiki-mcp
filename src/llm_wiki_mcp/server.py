@@ -6,6 +6,23 @@ from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
 
+from .advanced import audit_wiki_structure as audit_wiki_structure_impl
+from .advanced import classify_source_candidate as classify_source_candidate_impl
+from .advanced import compile_raw_to_formal_draft as compile_raw_to_formal_draft_impl
+from .advanced import detect_new_source as detect_new_source_impl
+from .advanced import find_duplicate_topics as find_duplicate_topics_impl
+from .advanced import find_low_confidence_pages as find_low_confidence_pages_impl
+from .advanced import find_referencing_pages as find_referencing_pages_impl
+from .advanced import find_stale_pages as find_stale_pages_impl
+from .advanced import find_uncompiled_sources as find_uncompiled_sources_impl
+from .advanced import knowledge_health_review as knowledge_health_review_impl
+from .advanced import semantic_search as semantic_search_impl
+from .advanced import standardize_page_candidate as standardize_page_candidate_impl
+from .advanced import suggest_merge_candidates as suggest_merge_candidates_impl
+from .advanced import suggest_wikilinks as suggest_wikilinks_impl
+from .advanced import update_source_manifest as update_source_manifest_impl
+from .advanced import validate_public_safety as validate_public_safety_impl
+from .advanced import write_public_draft as write_public_draft_impl
 from .bootstrap import init_wiki as init_wiki_project
 from .bootstrap import inspect_wiki as inspect_wiki_project
 from .candidates import create_formal_page_candidate as create_wiki_formal_page_candidate
@@ -222,6 +239,140 @@ def run_lint(mode: str = "full", timeout_seconds: float = 60.0) -> dict[str, Any
     """Run the wiki lint script with a timeout and structured error output."""
 
     return run_wiki_lint(paths, mode=mode, timeout_seconds=timeout_seconds)
+
+
+@mcp.tool(description="Search wiki chunks using a local deterministic token-vector baseline.")
+def semantic_search(query: str, scope: Literal["formal", "raw", "all"] = "formal", limit: int = 10, chunk_chars: int = 1200) -> dict[str, Any]:
+    """Return chunk-level metadata for formal/raw retrieval."""
+
+    return semantic_search_impl(paths, query=query, scope=scope, limit=limit, chunk_chars=chunk_chars)
+
+
+@mcp.tool(description="Classify a raw source into raw, draft, formal candidate, update existing, or ignore workflow.")
+def classify_source_candidate(source: str, intent: str | None = None, domain: str | None = None) -> dict[str, Any]:
+    """Classify source lifecycle routing without mutating wiki files."""
+
+    return classify_source_candidate_impl(paths, source=source, intent=intent, domain=domain)
+
+
+@mcp.tool(description="Compile a raw source into a formal page draft candidate without writing it.")
+def compile_raw_to_formal_draft(
+    source: str,
+    topic: str | None = None,
+    domain: str = "general",
+    page_type: str = "concept",
+    tags: list[str] | None = None,
+    confidence: str = "medium",
+) -> dict[str, Any]:
+    """Create a reviewable formal-page draft from one raw source."""
+
+    return compile_raw_to_formal_draft_impl(
+        paths,
+        source=source,
+        topic=topic,
+        domain=domain,
+        page_type=page_type,
+        tags=tags,
+        confidence=confidence,
+    )
+
+
+@mcp.tool(description="Suggest Obsidian wikilinks for candidate content without editing files.")
+def suggest_wikilinks(text: str, limit: int = 10, domain: str | None = None) -> dict[str, Any]:
+    """Suggest related formal-page wikilinks for text."""
+
+    return suggest_wikilinks_impl(paths, text=text, limit=limit, domain=domain)
+
+
+@mcp.tool(description="Render a public-site markdown draft candidate without publishing it.")
+def write_public_draft(page: str, title: str | None = None, redact: bool = True) -> dict[str, Any]:
+    """Clean frontmatter/wikilinks and return a public draft candidate."""
+
+    return write_public_draft_impl(paths, page=page, title=title, redact=redact)
+
+
+@mcp.tool(description="Validate public-site candidate content for sensitive material.")
+def validate_public_safety(content: str | None = None, page: str | None = None) -> dict[str, Any]:
+    """Check public content or a formal page for safety issues."""
+
+    return validate_public_safety_impl(paths, content=content, page=page)
+
+
+@mcp.tool(description="Detect raw sources that are new or changed since the sidecar source manifest.")
+def detect_new_source(source: str | None = None) -> dict[str, Any]:
+    """Detect changed raw sources and affected formal pages."""
+
+    return detect_new_source_impl(paths, source=source)
+
+
+@mcp.tool(description="Find formal pages that reference a raw source in frontmatter.sources.")
+def find_referencing_pages(source: str) -> dict[str, Any]:
+    """Locate formal pages affected by a raw source."""
+
+    return find_referencing_pages_impl(paths, source=source)
+
+
+@mcp.tool(description="Update the sidecar raw source digest manifest without changing page frontmatter.")
+def update_source_manifest(sources: list[str] | None = None) -> dict[str, Any]:
+    """Write .llm-wiki/source-manifest.json for incremental source detection."""
+
+    return update_source_manifest_impl(paths, sources=sources)
+
+
+@mcp.tool(description="Find raw sources not referenced by any formal page.")
+def find_uncompiled_sources() -> dict[str, Any]:
+    """Find raw materials that have not been compiled into formal pages."""
+
+    return find_uncompiled_sources_impl(paths)
+
+
+@mcp.tool(description="Find possibly duplicated formal topics using local similarity.")
+def find_duplicate_topics(threshold: float = 0.55, limit: int = 20) -> dict[str, Any]:
+    """Find overlapping formal pages for review."""
+
+    return find_duplicate_topics_impl(paths, threshold=threshold, limit=limit)
+
+
+@mcp.tool(description="Find stale or deprecated-looking formal pages.")
+def find_stale_pages(older_than_days: int = 365, limit: int = 20) -> dict[str, Any]:
+    """Find pages with stale updated dates or deprecated API markers."""
+
+    return find_stale_pages_impl(paths, older_than_days=older_than_days, limit=limit)
+
+
+@mcp.tool(description="Find formal pages marked confidence: low.")
+def find_low_confidence_pages(limit: int = 20) -> dict[str, Any]:
+    """Find pages that need stronger evidence."""
+
+    return find_low_confidence_pages_impl(paths, limit=limit)
+
+
+@mcp.tool(description="Suggest merge candidates without deleting or rewriting pages.")
+def suggest_merge_candidates(threshold: float = 0.65, limit: int = 10) -> dict[str, Any]:
+    """Suggest duplicate-topic merge candidates."""
+
+    return suggest_merge_candidates_impl(paths, threshold=threshold, limit=limit)
+
+
+@mcp.tool(description="Summarize wiki health across lint, sources, duplicates, stale pages, and confidence.")
+def knowledge_health_review() -> dict[str, Any]:
+    """Return a long-term governance health report."""
+
+    return knowledge_health_review_impl(paths)
+
+
+@mcp.tool(description="Audit wiki structure and return standardization recommendations without writing.")
+def audit_wiki_structure() -> dict[str, Any]:
+    """Inspect structure beyond the minimal inspect_wiki result."""
+
+    return audit_wiki_structure_impl(paths)
+
+
+@mcp.tool(description="Render a frontmatter-standardized markdown candidate without writing.")
+def standardize_page_candidate(page: str, page_type: str = "concept", confidence: str = "low") -> dict[str, Any]:
+    """Create a standardization candidate for an existing markdown page."""
+
+    return standardize_page_candidate_impl(paths, page=page, page_type=page_type, confidence=confidence)
 
 
 def main() -> None:
