@@ -154,21 +154,23 @@ def search_wiki(
             continue
 
         slug = rel[:-3] if rel.endswith(".md") else rel
-        scored_results.append((
-            score,
-            {
-                "path": rel,
-                "title": parsed.frontmatter.get("title")
-                or title_from_content(parsed.content),
-                "type": parsed.frontmatter.get("type"),
-                "tags": parsed.frontmatter.get("tags", []) or [],
-                "sources": parsed.frontmatter.get("sources", []) or [],
-                "confidence": parsed.frontmatter.get("confidence"),
-                "indexed": slug in indexed if is_formal else False,
-                "snippet": _snippet(text, terms),
-                "score": score,
-            },
-        ))
+        scored_results.append(
+            (
+                score,
+                {
+                    "path": rel,
+                    "title": parsed.frontmatter.get("title")
+                    or title_from_content(parsed.content),
+                    "type": parsed.frontmatter.get("type"),
+                    "tags": parsed.frontmatter.get("tags", []) or [],
+                    "sources": parsed.frontmatter.get("sources", []) or [],
+                    "confidence": parsed.frontmatter.get("confidence"),
+                    "indexed": slug in indexed if is_formal else False,
+                    "snippet": _snippet(text, terms),
+                    "score": score,
+                },
+            )
+        )
 
     scored_results.sort(key=lambda item: (-item[0], item[1]["path"]))
     results = [result for _, result in scored_results[:limit]]

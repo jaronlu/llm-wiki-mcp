@@ -104,3 +104,28 @@ def test_validate_frontmatter_reports_malformed_yaml(sample_wiki: Path) -> None:
     assert any(
         error.startswith("invalid YAML frontmatter:") for error in result["errors"]
     )
+
+
+def test_validate_frontmatter_uses_page_types_from_schema(sample_wiki: Path) -> None:
+    (sample_wiki / "SCHEMA.md").write_text(
+        "# Schema\n\n```yaml\n---\ntype: decision | concept\n---\n```\n"
+    )
+    page = sample_wiki / "domains/agent/concepts/decision.md"
+    page.write_text(
+        "---\n"
+        "title: Decision\n"
+        "created: 2026-01-01\n"
+        "updated: 2026-01-01\n"
+        "type: decision\n"
+        "tags: [ai]\n"
+        "sources: [raw/10-AI/example.md]\n"
+        "confidence: medium\n"
+        "---\n\n"
+        "# Decision\n"
+    )
+
+    result = validate_frontmatter(
+        WikiPaths(sample_wiki), "domains/agent/concepts/decision"
+    )
+
+    assert result["valid"] is True

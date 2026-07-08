@@ -15,19 +15,41 @@ REQUIRED_FILES = (
     "_meta/topic-map.md",
     "scripts/wiki_lint.py",
 )
-REQUIRED_DIRS = ("domains", "entities", "raw", "drafts", "reading", "_meta", "scripts")
+DEFAULT_FORMAL_DIRS = ("domains", "entities")
+DEFAULT_RAW_DIRS = ("raw",)
+DEFAULT_NON_FORMAL_DIRS = ("drafts", "reading")
+SYSTEM_DIRS = ("_meta", "scripts")
 
 
-def _schema_template(language: str) -> str:
+def _required_dirs(
+    formal_dirs: tuple[str, ...] = DEFAULT_FORMAL_DIRS,
+    raw_dirs: tuple[str, ...] = DEFAULT_RAW_DIRS,
+    non_formal_dirs: tuple[str, ...] = DEFAULT_NON_FORMAL_DIRS,
+) -> tuple[str, ...]:
+    """Return configured wiki dirs plus required system dirs."""
+
+    return tuple(
+        dict.fromkeys((*formal_dirs, *raw_dirs, *non_formal_dirs, *SYSTEM_DIRS))
+    )
+
+
+def _schema_template(
+    language: str,
+    formal_dirs: tuple[str, ...] = DEFAULT_FORMAL_DIRS,
+    raw_dirs: tuple[str, ...] = DEFAULT_RAW_DIRS,
+    non_formal_dirs: tuple[str, ...] = DEFAULT_NON_FORMAL_DIRS,
+) -> str:
     title = "Wiki Schema" if language == "en" else "Wiki Schema 规范"
+    formal_text = ", ".join(f"`{dirname}/`" for dirname in formal_dirs)
+    raw_text = ", ".join(f"`{dirname}/`" for dirname in raw_dirs)
+    non_formal_text = ", ".join(f"`{dirname}/`" for dirname in non_formal_dirs)
     return f"""# {title}
 
 ## Directory Structure
 
-- `raw/`: immutable source materials.
-- `domains/`: compiled knowledge pages organized by domain and page type.
-- `entities/`: cross-domain entities.
-- `drafts/` and `reading/`: non-formal zones.
+- {raw_text}: immutable source materials.
+- {formal_text}: compiled knowledge pages organized by domain and page type.
+- {non_formal_text}: non-formal zones.
 
 ## Frontmatter
 
@@ -45,7 +67,7 @@ confidence: high | medium | low
 
 ## Rules
 
-- Keep `raw/` immutable.
+- Keep raw source directories immutable.
 - Register every formal page in `index.md`.
 - Write every maintenance action to `log.md`.
 - Preserve `[[wikilinks]]` in source wiki files.
@@ -108,9 +130,20 @@ raise SystemExit(1 if errors else 0)
 """
 
 
-def _template_for(path: str, language: str) -> str:
+def _template_for(
+    path: str,
+    language: str,
+    formal_dirs: tuple[str, ...] = DEFAULT_FORMAL_DIRS,
+    raw_dirs: tuple[str, ...] = DEFAULT_RAW_DIRS,
+    non_formal_dirs: tuple[str, ...] = DEFAULT_NON_FORMAL_DIRS,
+) -> str:
     templates = {
-        "SCHEMA.md": _schema_template(language),
+        "SCHEMA.md": _schema_template(
+            language,
+            formal_dirs=formal_dirs,
+            raw_dirs=raw_dirs,
+            non_formal_dirs=non_formal_dirs,
+        ),
         "AGENTS.md": _agents_template(language),
         "index.md": _index_template(),
         "log.md": _log_template(),
@@ -121,7 +154,12 @@ def _template_for(path: str, language: str) -> str:
 
 
 def init_wiki(
-    root: str | Path, profile: str = "personal", language: str = "zh"
+    root: str | Path,
+    profile: str = "personal",
+    language: str = "zh",
+    formal_dirs: tuple[str, ...] = DEFAULT_FORMAL_DIRS,
+    raw_dirs: tuple[str, ...] = DEFAULT_RAW_DIRS,
+    non_formal_dirs: tuple[str, ...] = DEFAULT_NON_FORMAL_DIRS,
 ) -> dict[str, Any]:
     """Create a minimal llm-wiki structure without overwriting existing files."""
 
@@ -134,7 +172,8 @@ def init_wiki(
     skipped: list[str] = []
     warnings: list[str] = []
 
-    for dirname in REQUIRED_DIRS:
+    required_dirs = _required_dirs(formal_dirs, raw_dirs, non_formal_dirs)
+    for dirname in required_dirs:
         path = root_path / dirname
         if path.exists():
             skipped.append(dirname)
@@ -149,7 +188,15 @@ def init_wiki(
             continue
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("x", encoding="utf-8") as handle:
-            handle.write(_template_for(filename, language))
+            handle.write(
+                _template_for(
+                    filename,
+                    language,
+                    formal_dirs=formal_dirs,
+                    raw_dirs=raw_dirs,
+                    non_formal_dirs=non_formal_dirs,
+                )
+            )
         created.append(filename)
 
     if profile not in {"personal", "research", "engineering", "learning", "default"}:
@@ -170,13 +217,19 @@ def init_wiki(
     }
 
 
-def inspect_wiki(root: str | Path) -> dict[str, Any]:
-    """Inspect whether a directory has the minimal llm-wiki structure."""
+def inspect_wiki(
+    root: str | Path,
+    formal_dirs: tuple[str, ...] = DEFAULT_FORMAL_DIRS,
+    raw_dirs: tuple[str, ...] = DEFAULT_RAW_DIRS,
+    non_formal_dirs: tuple[str, ...] = DEFAULT_NON_FORMAL_DIRS,
+) -> dict[str, Any]:
+    """Inspect whether a directory matches the configured llm-wiki structure."""
 
     root_path = Path(root).expanduser()
+    required_dirs = _required_dirs(formal_dirs, raw_dirs, non_formal_dirs)
     missing: list[str] = []
     if not root_path.exists() or not root_path.is_dir():
-        missing = [*REQUIRED_FILES, *REQUIRED_DIRS]
+        missing = [*REQUIRED_FILES, *required_dirs]
         return {
             **response_envelope(next_action="run init_wiki"),
             "is_wiki": False,
@@ -188,19 +241,21 @@ def inspect_wiki(root: str | Path) -> dict[str, Any]:
     for item in REQUIRED_FILES:
         if not (root_path / item).is_file():
             missing.append(item)
-    for item in REQUIRED_DIRS:
+    for item in required_dirs:
         if not (root_path / item).is_dir():
             missing.append(item)
 
     markdown_files = list(root_path.rglob("*.md"))
     formal_pages: list[Path] = []
-    for dirname in ("domains", "entities"):
+    for dirname in formal_dirs:
         base = root_path / dirname
         if base.exists():
             formal_pages.extend(base.rglob("*.md"))
-    raw_sources = (
-        list((root_path / "raw").rglob("*.md")) if (root_path / "raw").exists() else []
-    )
+    raw_sources: list[Path] = []
+    for dirname in raw_dirs:
+        base = root_path / dirname
+        if base.exists():
+            raw_sources.extend(base.rglob("*.md"))
 
     return {
         **response_envelope(next_action="ready" if not missing else "run init_wiki"),

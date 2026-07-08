@@ -30,14 +30,16 @@ class LogEntry:
         """Render the entry in the repository's markdown log format."""
 
         when = self.entry_date or local_date.today().isoformat()
-        return "\n".join([
-            f"## [{when}] {self.action} | {self.subject}",
-            f"- 原因: {self.reason}",
-            f"- 更新: {self.changes}",
-            f"- 影响: {self.impact}",
-            f"- 验证: {self.verification}",
-            "",
-        ])
+        return "\n".join(
+            [
+                f"## [{when}] {self.action} | {self.subject}",
+                f"- 原因: {self.reason}",
+                f"- 更新: {self.changes}",
+                f"- 影响: {self.impact}",
+                f"- 验证: {self.verification}",
+                "",
+            ]
+        )
 
 
 def _fsync_directory(path: Path) -> None:

@@ -66,7 +66,9 @@ class WikiPaths:
             raise WikiPathError(f"Path must be under {prefix}: {rel}")
         return resolved
 
-    def require_under_any(self, path: str | Path, prefixes: tuple[str, ...], label: str) -> Path:
+    def require_under_any(
+        self, path: str | Path, prefixes: tuple[str, ...], label: str
+    ) -> Path:
         """Resolve a path and require that it stays under one allowed subdirectory."""
 
         resolved = self.resolve(path)
@@ -87,7 +89,10 @@ class WikiPaths:
         """Return whether a path belongs to the formal wiki page zones."""
 
         rel = self.rel(path)
-        return any(rel == dirname.strip("/") or rel.startswith(f"{dirname.strip('/')}/") for dirname in self.formal_dirs)
+        return any(
+            rel == dirname.strip("/") or rel.startswith(f"{dirname.strip('/')}/")
+            for dirname in self.formal_dirs
+        )
 
     def require_formal_page(self, path: str | Path) -> Path:
         """Resolve a formal wiki page path or slug and require an existing markdown file."""
@@ -97,7 +102,9 @@ class WikiPaths:
         if not self.is_formal_page(resolved):
             raise WikiPathError(f"Path is not a formal wiki page: {self.rel(resolved)}")
         if resolved.suffix != ".md":
-            raise WikiPathError(f"Formal wiki page must be markdown: {self.rel(resolved)}")
+            raise WikiPathError(
+                f"Formal wiki page must be markdown: {self.rel(resolved)}"
+            )
         if not resolved.is_file():
             raise FileNotFoundError(f"File not found: {self.rel(resolved)}")
         return resolved

@@ -25,11 +25,11 @@ find_referencing_pages
         │
         └── N pages
                 ↓
-        create_update_candidate × N
+        create_update_candidate per affected page
                 ↓
-Review bundle
+Review candidate(s) as a bundle
                 ↓
-Apply only after explicit user/orchestrator approval
+Apply outside this server after explicit approval
                 ↓
 update_source_manifest
                 ↓
@@ -99,7 +99,7 @@ Bootstrap and reading:
 - `init_wiki`
 - `inspect_wiki`
 - `search_wiki`
-- `semantic_search`
+- `semantic_search` (local deterministic baseline)
 - `read_page`
 - `read_raw_source`
 

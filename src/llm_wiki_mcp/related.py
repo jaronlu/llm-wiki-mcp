@@ -52,11 +52,13 @@ def _page_document(paths: WikiPaths, file_path: Path) -> dict[str, Any]:
     tags = parsed.frontmatter.get("tags", []) or []
     if not isinstance(tags, list):
         tags = []
-    haystack = "\n".join([
-        str(title),
-        " ".join(map(str, tags)),
-        parsed.content,
-    ])
+    haystack = "\n".join(
+        [
+            str(title),
+            " ".join(map(str, tags)),
+            parsed.content,
+        ]
+    )
     return {
         "path": paths.rel(file_path),
         "title": title,
@@ -114,18 +116,20 @@ def find_related_pages(
         score, matched_terms = _score(candidate, query_tokens, query_tags)
         if score <= 0:
             continue
-        results.append({
-            "path": candidate["path"],
-            "title": candidate["title"],
-            "type": candidate["type"],
-            "tags": candidate["tags"],
-            "score": score,
-            "reason": f"matched: {', '.join(matched_terms)}"
-            if matched_terms
-            else "matched topic",
-            "matched_terms": matched_terms,
-            "snippet": candidate["snippet"],
-        })
+        results.append(
+            {
+                "path": candidate["path"],
+                "title": candidate["title"],
+                "type": candidate["type"],
+                "tags": candidate["tags"],
+                "score": score,
+                "reason": f"matched: {', '.join(matched_terms)}"
+                if matched_terms
+                else "matched topic",
+                "matched_terms": matched_terms,
+                "snippet": candidate["snippet"],
+            }
+        )
 
     results.sort(key=lambda item: (-item["score"], item["path"]))
     kept = results[:limit]

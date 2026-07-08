@@ -51,6 +51,36 @@ def test_inspect_wiki_reports_missing_and_detected_counts(
     assert complete_result["detected"]["markdown_files"] >= 4
 
 
+def test_bootstrap_uses_configured_wiki_directories(tmp_path: Path) -> None:
+    root = tmp_path / "custom-wiki"
+
+    init_result = init_wiki(
+        root,
+        formal_dirs=("knowledge",),
+        raw_dirs=("sources",),
+        non_formal_dirs=("drafts", "inbox"),
+    )
+    (root / "knowledge/custom.md").write_text("# Custom\n")
+    (root / "sources/source.md").write_text("# Source\n")
+
+    inspect_result = inspect_wiki(
+        root,
+        formal_dirs=("knowledge",),
+        raw_dirs=("sources",),
+        non_formal_dirs=("drafts", "inbox"),
+    )
+
+    assert "knowledge" in init_result["created"]
+    assert "sources" in init_result["created"]
+    assert "inbox" in init_result["created"]
+    schema = (root / "SCHEMA.md").read_text()
+    assert "`knowledge/`" in schema
+    assert "`sources/`" in schema
+    assert "`inbox/`" in schema
+    assert inspect_result["detected"]["formal_pages"] == 1
+    assert inspect_result["detected"]["raw_sources"] == 1
+
+
 def test_default_config_uses_home_relative_wiki_root(
     tmp_path: Path, monkeypatch
 ) -> None:
@@ -69,12 +99,14 @@ def test_default_config_reads_local_config_yaml(tmp_path: Path, monkeypatch) -> 
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     (config_dir / "config.yaml").write_text(
-        "\n".join([
-            f"wiki_root: {wiki_root}",
-            f"init_wiki_root: {init_root}",
-            "allow_write_raw: true",
-            "",
-        ])
+        "\n".join(
+            [
+                f"wiki_root: {wiki_root}",
+                f"init_wiki_root: {init_root}",
+                "allow_write_raw: true",
+                "",
+            ]
+        )
     )
 
     monkeypatch.chdir(tmp_path)
@@ -90,13 +122,15 @@ def test_config_file_and_env_root_override(tmp_path: Path, monkeypatch) -> None:
     configured_root = tmp_path / "configured-wiki"
     override_root = tmp_path / "override-wiki"
     config_path.write_text(
-        "\n".join([
-            f"wiki_root: {configured_root}",
-            f"init_wiki_root: {tmp_path / 'init-target'}",
-            "allow_write_raw: false",
-            "formal_dirs: [domains, entities, projects]",
-            "",
-        ])
+        "\n".join(
+            [
+                f"wiki_root: {configured_root}",
+                f"init_wiki_root: {tmp_path / 'init-target'}",
+                "allow_write_raw: false",
+                "formal_dirs: [domains, entities, projects]",
+                "",
+            ]
+        )
     )
 
     config = load_config(config_path)

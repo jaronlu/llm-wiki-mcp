@@ -106,6 +106,27 @@ def test_create_formal_page_candidate_rejects_raw_source_path(
         raise AssertionError("expected ValueError")
 
 
+def test_create_formal_page_candidate_uses_page_types_from_schema(
+    sample_wiki: Path,
+) -> None:
+    (sample_wiki / "SCHEMA.md").write_text(
+        "# Schema\n\n```yaml\n---\ntype: decision | concept\n---\n```\n"
+    )
+
+    result = create_formal_page_candidate(
+        WikiPaths(sample_wiki),
+        path="domains/agent/concepts/decision.md",
+        title="Decision",
+        page_type="decision",
+        tags=["ai"],
+        sources=["raw/10-AI/example.md"],
+        confidence="medium",
+        body="# Decision\n",
+    )
+
+    assert result["frontmatter"]["type"] == "decision"
+
+
 def test_update_index_candidate_inserts_link_under_existing_heading_without_writing(
     sample_wiki: Path,
 ) -> None:

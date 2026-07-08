@@ -206,18 +206,20 @@ def semantic_search(
             score = _cosine(query_vector, _token_counts(chunk))
             if score <= 0:
                 continue
-            results.append({
-                "path": rel,
-                "chunk_index": chunk_index,
-                "offset": offset,
-                "score": round(score, 6),
-                "title": parsed.frontmatter.get("title")
-                or title_from_content(parsed.content),
-                "type": parsed.frontmatter.get("type"),
-                "tags": parsed.frontmatter.get("tags", []) or [],
-                "sources": parsed.frontmatter.get("sources", []) or [],
-                "content": chunk,
-            })
+            results.append(
+                {
+                    "path": rel,
+                    "chunk_index": chunk_index,
+                    "offset": offset,
+                    "score": round(score, 6),
+                    "title": parsed.frontmatter.get("title")
+                    or title_from_content(parsed.content),
+                    "type": parsed.frontmatter.get("type"),
+                    "tags": parsed.frontmatter.get("tags", []) or [],
+                    "sources": parsed.frontmatter.get("sources", []) or [],
+                    "content": chunk,
+                }
+            )
 
     results.sort(key=lambda item: (-item["score"], item["path"], item["chunk_index"]))
     return {
@@ -319,22 +321,24 @@ def compile_raw_to_formal_draft(
         if related["results"]
         else "no related formal page found; a new independently recallable page may be appropriate"
     )
-    body = "\n".join([
-        "## 核心结论",
-        "",
-        f"- This is a review draft compiled from `{rel_source}`.",
-        "- Treat source facts, agent synthesis, and personal conclusions separately during final editing.",
-        "",
-        "## Source Facts",
-        "",
-        raw_text.strip()[:4000],
-        "",
-        "## Review Notes",
-        "",
-        f"- Decision: {decision}",
-        f"- Reason: {reason}",
-        "- Verify wikilinks and evidence boundaries before applying.",
-    ])
+    body = "\n".join(
+        [
+            "## 核心结论",
+            "",
+            f"- This is a review draft compiled from `{rel_source}`.",
+            "- Treat source facts, agent synthesis, and personal conclusions separately during final editing.",
+            "",
+            "## Source Facts",
+            "",
+            raw_text.strip()[:4000],
+            "",
+            "## Review Notes",
+            "",
+            f"- Decision: {decision}",
+            f"- Reason: {reason}",
+            "- Verify wikilinks and evidence boundaries before applying.",
+        ]
+    )
     slug = _slugify(title)
     type_dir = PAGE_TYPE_DIRS.get(page_type, f"{page_type}s")
     candidate_path = (
@@ -406,11 +410,13 @@ def validate_public_safety(
         for match in re.finditer(pattern, text):
             start = max(0, match.start() - 40)
             end = min(len(text), match.end() + 40)
-            issues.append({
-                "kind": kind,
-                "match": match.group(0)[:80],
-                "snippet": " ".join(text[start:end].split()),
-            })
+            issues.append(
+                {
+                    "kind": kind,
+                    "match": match.group(0)[:80],
+                    "snippet": " ".join(text[start:end].split()),
+                }
+            )
     return {
         **response_envelope(
             warnings=[] if not issues else ["public safety issues found"],
@@ -518,12 +524,14 @@ def find_referencing_pages(paths: WikiPaths, source: str) -> dict[str, Any]:
     for doc in _iter_formal_docs(paths):
         sources = doc.frontmatter.get("sources", []) or []
         if isinstance(sources, list) and rel_source in [str(item) for item in sources]:
-            pages.append({
-                "path": doc.rel,
-                "title": doc.title,
-                "type": doc.frontmatter.get("type"),
-                "tags": doc.frontmatter.get("tags", []) or [],
-            })
+            pages.append(
+                {
+                    "path": doc.rel,
+                    "title": doc.title,
+                    "type": doc.frontmatter.get("type"),
+                    "tags": doc.frontmatter.get("tags", []) or [],
+                }
+            )
     return {
         **response_envelope(
             next_action="create_update_candidate"
@@ -534,6 +542,24 @@ def find_referencing_pages(paths: WikiPaths, source: str) -> dict[str, Any]:
         "count": len(pages),
         "pages": pages,
     }
+
+
+def _source_review_actions(
+    rel_source: str, referencing_pages: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Return per-source candidate actions for an orchestrator to review."""
+
+    if not referencing_pages:
+        return [{"action": "create_formal_page_candidate", "source": rel_source}]
+    return [
+        {
+            "action": "create_update_candidate",
+            "source": rel_source,
+            "page": page["path"],
+            "title": page["title"],
+        }
+        for page in referencing_pages
+    ]
 
 
 def detect_new_source(paths: WikiPaths, source: str | None = None) -> dict[str, Any]:
@@ -567,13 +593,16 @@ def detect_new_source(paths: WikiPaths, source: str | None = None) -> dict[str, 
             if references["count"] == 0
             else "create_update_candidate"
         )
-        changes.append({
-            "path": rel,
-            "status": status,
-            "sha256": digest,
-            "referencing_pages": references["pages"],
-            "suggested_action": suggested_action,
-        })
+        changes.append(
+            {
+                "path": rel,
+                "status": status,
+                "sha256": digest,
+                "referencing_pages": references["pages"],
+                "suggested_action": suggested_action,
+                "suggested_actions": _source_review_actions(rel, references["pages"]),
+            }
+        )
     return {
         **response_envelope(next_action="review_source_changes" if changes else "none"),
         "manifest": MANIFEST_PATH,
@@ -635,12 +664,14 @@ def suggest_wikilinks(
         if score <= 0:
             continue
         slug = doc.rel[:-3] if doc.rel.endswith(".md") else doc.rel
-        suggestions.append({
-            "path": doc.rel,
-            "wikilink": f"[[{slug}]]",
-            "title": doc.title,
-            "score": round(score, 6),
-        })
+        suggestions.append(
+            {
+                "path": doc.rel,
+                "wikilink": f"[[{slug}]]",
+                "title": doc.title,
+                "score": round(score, 6),
+            }
+        )
     suggestions.sort(key=lambda item: (-item["score"], item["path"]))
     return {
         **response_envelope(
@@ -687,12 +718,14 @@ def find_duplicate_topics(
         for right in docs[index + 1 :]:
             score = _cosine(vectors[left.rel], vectors[right.rel])
             if score >= threshold:
-                duplicates.append({
-                    "left": left.rel,
-                    "right": right.rel,
-                    "score": round(score, 6),
-                    "reason": "title/tag/content overlap",
-                })
+                duplicates.append(
+                    {
+                        "left": left.rel,
+                        "right": right.rel,
+                        "score": round(score, 6),
+                        "reason": "title/tag/content overlap",
+                    }
+                )
     duplicates.sort(key=lambda item: (-item["score"], item["left"], item["right"]))
     return {
         **response_envelope(
@@ -735,12 +768,14 @@ def find_stale_pages(
             reasons.append("updated date is stale or missing")
         if deprecated:
             reasons.append("content mentions deprecated or removed API")
-        stale.append({
-            "path": doc.rel,
-            "title": doc.title,
-            "updated": doc.frontmatter.get("updated"),
-            "reasons": reasons,
-        })
+        stale.append(
+            {
+                "path": doc.rel,
+                "title": doc.title,
+                "updated": doc.frontmatter.get("updated"),
+                "reasons": reasons,
+            }
+        )
     stale.sort(key=lambda item: (str(item["updated"]), item["path"]))
     return {
         **response_envelope(next_action="refresh_stale_pages" if stale else "none"),
@@ -879,20 +914,22 @@ def standardize_page_candidate(
         or file_path.stem.replace("-", " ").title()
     )
     body = parsed.content if parsed.has_frontmatter else text
-    content = "\n".join([
-        "---",
-        f"title: {title}",
-        f"created: {date.today().isoformat()}",
-        f"updated: {date.today().isoformat()}",
-        f"type: {page_type}",
-        "tags: []",
-        "sources: []",
-        f"confidence: {confidence}",
-        "---",
-        "",
-        body.strip(),
-        "",
-    ])
+    content = "\n".join(
+        [
+            "---",
+            f"title: {title}",
+            f"created: {date.today().isoformat()}",
+            f"updated: {date.today().isoformat()}",
+            f"type: {page_type}",
+            "tags: []",
+            "sources: []",
+            f"confidence: {confidence}",
+            "---",
+            "",
+            body.strip(),
+            "",
+        ]
+    )
     return {
         **candidate_envelope(
             warnings=["sources and tags require human review before applying"]

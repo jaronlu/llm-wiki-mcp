@@ -119,19 +119,77 @@ def test_source_manifest_detects_and_updates_raw_sources(sample_wiki: Path) -> N
     after = detect_new_source(paths, source="raw/10-AI/example.md")
 
     assert before["changes"][0]["status"] == "new"
+    assert before["changes"][0]["suggested_action"] == "create_update_candidate"
+    assert before["changes"][0]["suggested_actions"] == [
+        {
+            "action": "create_update_candidate",
+            "source": "raw/10-AI/example.md",
+            "page": "domains/agent/concepts/example.md",
+            "title": "Example Page",
+        }
+    ]
     assert update["path"] == ".llm-wiki/source-manifest.json"
     assert (sample_wiki / ".llm-wiki/source-manifest.json").is_file()
     assert after["changes"] == []
+
+
+def test_detect_new_source_suggests_formal_page_candidate_for_unreferenced_source(
+    sample_wiki: Path,
+) -> None:
+    paths = WikiPaths(sample_wiki)
+    (sample_wiki / "raw/10-AI/unreferenced.md").write_text("# New Source\n")
+
+    result = detect_new_source(paths, source="raw/10-AI/unreferenced.md")
+
+    assert result["changes"][0]["suggested_action"] == "create_formal_page_candidate"
+    assert result["changes"][0]["suggested_actions"] == [
+        {
+            "action": "create_formal_page_candidate",
+            "source": "raw/10-AI/unreferenced.md",
+        }
+    ]
+
+
+def test_detect_new_source_returns_one_update_action_per_referencing_page(
+    sample_wiki: Path,
+) -> None:
+    paths = WikiPaths(sample_wiki)
+    second_page = sample_wiki / "domains/agent/concepts/second.md"
+    second_page.write_text(
+        "---\n"
+        "title: Second Page\n"
+        "created: 2026-01-01\n"
+        "updated: 2026-01-01\n"
+        "type: concept\n"
+        "tags: [ai]\n"
+        "sources: [raw/10-AI/example.md]\n"
+        "confidence: medium\n"
+        "---\n\n"
+        "# Second Page\n\nAnother formal page using the same source.\n"
+    )
+
+    result = detect_new_source(paths, source="raw/10-AI/example.md")
+
+    actions = result["changes"][0]["suggested_actions"]
+    assert [action["page"] for action in actions] == [
+        "domains/agent/concepts/example.md",
+        "domains/agent/concepts/second.md",
+    ]
+    assert all(action["action"] == "create_update_candidate" for action in actions)
 
 
 def test_find_referencing_and_uncompiled_sources(sample_wiki: Path) -> None:
     (sample_wiki / "raw/10-AI/uncompiled.md").write_text("# Uncompiled\n")
 
     references = find_referencing_pages(WikiPaths(sample_wiki), "raw/10-AI/example.md")
+    new_page_target = find_referencing_pages(
+        WikiPaths(sample_wiki), "raw/10-AI/uncompiled.md"
+    )
     uncompiled = find_uncompiled_sources(WikiPaths(sample_wiki))
 
     assert references["count"] == 1
     assert references["pages"][0]["path"] == "domains/agent/concepts/example.md"
+    assert new_page_target["next_action"] == "create_formal_page_candidate"
     assert "raw/10-AI/uncompiled.md" in uncompiled["sources"]
 
 

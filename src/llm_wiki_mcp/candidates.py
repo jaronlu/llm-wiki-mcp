@@ -13,7 +13,7 @@ from typing import Any
 
 import yaml
 
-from .frontmatter import VALID_CONFIDENCE, VALID_PAGE_TYPES
+from .frontmatter import VALID_CONFIDENCE, page_types_from_schema
 from .paths import WikiPaths
 from .responses import candidate_envelope
 
@@ -40,6 +40,7 @@ def _formal_candidate_path(paths: WikiPaths, path: str | Path) -> Path:
 
 
 def _validate_candidate_metadata(
+    paths: WikiPaths,
     page_type: str,
     tags: list[str],
     sources: list[str],
@@ -47,7 +48,7 @@ def _validate_candidate_metadata(
 ) -> None:
     """Validate formal page candidate metadata before rendering markdown."""
 
-    if page_type not in VALID_PAGE_TYPES:
+    if page_type not in page_types_from_schema(paths):
         raise ValueError(f"invalid type: {page_type}")
     if confidence not in VALID_CONFIDENCE:
         raise ValueError(f"invalid confidence: {confidence}")
@@ -109,7 +110,7 @@ def create_formal_page_candidate(
         raise ValueError("title must not be empty")
     if not body.strip():
         raise ValueError("body must not be empty")
-    _validate_candidate_metadata(page_type, tags, sources, confidence)
+    _validate_candidate_metadata(paths, page_type, tags, sources, confidence)
     file_path = _formal_candidate_path(paths, path)
     created_value = created or _today()
     updated_value = updated or created_value

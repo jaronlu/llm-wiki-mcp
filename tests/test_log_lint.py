@@ -73,7 +73,9 @@ def test_run_lint_os_error_is_structured(tmp_path: Path) -> None:
     assert "failed to run scripts/wiki_lint.py" in result["errors"][0]
 
 
-def test_run_lint_nonzero_without_error_section_is_structured(sample_wiki: Path) -> None:
+def test_run_lint_nonzero_without_error_section_is_structured(
+    sample_wiki: Path,
+) -> None:
     (sample_wiki / "scripts/wiki_lint.py").write_text(
         "print('Wiki lint summary')\n"
         "print('- formal pages: 1')\n"

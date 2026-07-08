@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import date
 from typing import Any
@@ -22,6 +23,8 @@ REQUIRED_FIELDS = (
 )
 VALID_PAGE_TYPES = {"concept", "query", "comparison", "summary", "entity", "reference"}
 VALID_CONFIDENCE = {"high", "medium", "low"}
+TYPE_LINE_RE = re.compile(r"^\s*type\s*:\s*(.+)$", re.MULTILINE)
+TYPE_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
 
 
 def _json_safe(value: Any) -> Any:
@@ -81,6 +84,25 @@ def title_from_content(content: str) -> str | None:
     return None
 
 
+def page_types_from_schema(paths: WikiPaths) -> set[str]:
+    """Return page types declared by SCHEMA.md, falling back to built-in types."""
+
+    schema_path = paths.root / "SCHEMA.md"
+    if not schema_path.is_file():
+        return set(VALID_PAGE_TYPES)
+    text = schema_path.read_text(errors="replace")
+    match = TYPE_LINE_RE.search(text)
+    if not match:
+        return set(VALID_PAGE_TYPES)
+    raw_types = match.group(1)
+    types = {
+        token
+        for token in TYPE_TOKEN_RE.findall(raw_types)
+        if token not in {"type", "tags", "sources", "confidence"}
+    }
+    return types or set(VALID_PAGE_TYPES)
+
+
 def validate_frontmatter(paths: WikiPaths, page: str) -> dict[str, Any]:
     """Validate the required frontmatter shape for an existing formal wiki page."""
 
@@ -103,7 +125,8 @@ def validate_frontmatter(paths: WikiPaths, page: str) -> dict[str, Any]:
             errors.append(f"required field is empty: {field}")
 
     page_type = frontmatter.get("type")
-    if page_type is not None and page_type not in VALID_PAGE_TYPES:
+    valid_page_types = page_types_from_schema(paths)
+    if page_type is not None and page_type not in valid_page_types:
         errors.append(f"invalid type: {page_type}")
 
     tags = frontmatter.get("tags")
