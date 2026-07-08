@@ -12,14 +12,15 @@ from . import (
     candidates,
     frontmatter,
     lint,
+    log,
     pages,
     raw,
     related,
     search,
 )
-from . import log as log_tools
 from .config import load_config
 from .paths import WikiPaths
+from .sync import sync_domain_file
 
 config = load_config()
 paths = WikiPaths(
@@ -106,6 +107,26 @@ def create_raw_source(path: str, content: str) -> dict[str, Any]:
     return raw.create_raw_source(paths, path=path, content=content)
 
 
+@mcp.tool(description="Create or update a formal page in domains/<domain> by fileName.")
+def sync(
+    fileName: str,
+    content: str,
+    domain: str = "general",
+    page_type: str = "concept",
+) -> dict[str, Any]:
+    """Update an existing domain file by name, or create it when missing."""
+
+    if not config.allow_write_formal:
+        raise PermissionError("Formal page writes are disabled by config")
+    return sync_domain_file(
+        paths,
+        fileName=fileName,
+        content=content,
+        domain=domain,
+        page_type=page_type,
+    )
+
+
 @mcp.tool(
     description="Append a structured entry to log.md and trim old entries to retention."
 )
@@ -120,7 +141,7 @@ def append_log(
 ) -> dict[str, Any]:
     """Append a structured log.md entry using the repository log format."""
 
-    entry = log_tools.LogEntry(
+    entry = log.LogEntry(
         action=action,
         subject=subject,
         reason=reason,
@@ -129,9 +150,7 @@ def append_log(
         verification=verification,
         entry_date=date,
     )
-    return log_tools.append_log(
-        paths, entry, retention_entries=config.log_retention_entries
-    )
+    return log.append_log(paths, entry, retention_entries=config.log_retention_entries)
 
 
 @mcp.tool(description="Validate a formal wiki page's YAML frontmatter shape.")
@@ -237,7 +256,7 @@ def create_log_candidate(
 ) -> dict[str, Any]:
     """Generate a log.md entry candidate for caller review, not disk write."""
 
-    return log_tools.create_log_candidate(
+    return log.create_log_candidate(
         action=action,
         subject=subject,
         reason=reason,

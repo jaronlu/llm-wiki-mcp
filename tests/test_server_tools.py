@@ -24,6 +24,7 @@ async def test_all_tools_are_registered() -> None:
     assert "read_page" in names
     assert "read_raw_source" in names
     assert "create_raw_source" in names
+    assert "sync" in names
     assert "append_log" in names
     assert "validate_frontmatter" in names
     assert "find_related_pages" in names
@@ -76,6 +77,7 @@ async def test_tool_schemas_match_design_parameter_names() -> None:
         "domain",
         "limit",
     }
+    assert "fileName" in tools["sync"].inputSchema["properties"]
     assert "mode" in tools["run_lint"].inputSchema["properties"]
     assert "page" in tools["write_public_draft"].inputSchema["properties"]
     assert set(tools["find_referencing_pages"].inputSchema["properties"]) == {"source"}

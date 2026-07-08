@@ -102,6 +102,7 @@ Bootstrap and reading:
 - `semantic_search` (local deterministic baseline)
 - `read_page`
 - `read_raw_source`
+- `sync` (requires `allow_write_formal: true`)
 
 Candidate-first maintenance:
 
@@ -133,7 +134,8 @@ Governance:
 - `audit_wiki_structure`
 
 Mutation tools are conservative by default. Raw writes are disabled unless
-`allow_write_raw: true`; formal pages, index updates, and public exports stay
+`allow_write_raw: true`; domain file sync is disabled unless
+`allow_write_formal: true`; index updates and public exports stay
 candidate-first.
 
 ## Configuration
@@ -153,8 +155,8 @@ empty directory lists, and non-positive `log_retention_entries` values.
 
 - All paths must resolve under `wiki_root`.
 - `raw/` writes are create-only and never overwrite existing files.
-- Formal page writes, `index.md` updates, migrations, and public exports are
-  candidate-first.
+- Formal page writes require `allow_write_formal: true`; `index.md` updates,
+  migrations, and public exports are candidate-first.
 - `.llm-wiki/source-manifest.json` tracks raw source digests without modifying
   page frontmatter.
 - `run_lint` returns structured lint data instead of treating lint failures as
