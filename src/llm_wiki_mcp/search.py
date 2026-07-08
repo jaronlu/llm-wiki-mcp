@@ -54,6 +54,50 @@ def _snippet(text: str, terms: list[str], max_len: int = 220) -> str:
     return " ".join(text[start:end].split())
 
 
+def _query_terms(query: str) -> list[str]:
+    """Tokenize a natural-language query into stable case-folded search terms."""
+
+    # Keep hyphenated identifiers such as ``llm-wiki-mcp`` intact while still
+    # splitting prose punctuation. Chinese phrases separated by spaces remain
+    # individual terms, matching how users naturally type mixed CN/EN queries.
+    return [term.casefold() for term in re.findall(r"[\w\-]+", query) if term.strip()]
+
+
+def _field_text(value: Any) -> str:
+    """Return a lowercase searchable string for frontmatter values."""
+
+    if isinstance(value, list):
+        return " ".join(map(str, value)).casefold()
+    return str(value or "").casefold()
+
+
+def _match_score(*, phrase: str, terms: list[str], path: str, title: str, tags: str, body: str) -> int:
+    """Score partial query matches, weighting high-signal metadata above body text."""
+
+    searchable = "\n".join([path, title, tags, body])
+    score = 0
+    matched_terms = 0
+    for term in terms:
+        term_score = 0
+        if term in title:
+            term_score += 5
+        if term in path:
+            term_score += 4
+        if term in tags:
+            term_score += 3
+        if term in body:
+            term_score += 1
+        if term_score:
+            matched_terms += 1
+            score += term_score
+    if phrase and phrase in searchable:
+        score += 10
+    # Prefer pages that cover more of a long query over pages that only match
+    # one generic term such as "MCP".
+    score += matched_terms * 2
+    return score
+
+
 def search_wiki(
     paths: WikiPaths,
     query: str,
@@ -78,9 +122,10 @@ def search_wiki(
     if scope in {"raw", "all"}:
         dirs.extend(RAW_DIRS)
 
-    terms = [term.lower() for term in query.split() if term.strip()]
+    terms = _query_terms(query)
+    phrase = query.casefold().strip()
     indexed = _load_indexed_slugs(paths)
-    results: list[dict[str, Any]] = []
+    scored_results: list[tuple[int, dict[str, Any]]] = []
 
     for file_path in _iter_markdown(paths.root, dirs):
         rel = paths.rel(file_path)
@@ -92,16 +137,22 @@ def search_wiki(
         if page_type != "any" and parsed.frontmatter.get("type") != page_type:
             continue
 
-        haystack = "\n".join([
-            str(parsed.frontmatter.get("title", "")),
-            " ".join(map(str, parsed.frontmatter.get("tags", []) or [])),
-            parsed.content,
-        ]).lower()
-        if not all(term in haystack for term in terms):
+        title = _field_text(parsed.frontmatter.get("title") or title_from_content(parsed.content))
+        tags = _field_text(parsed.frontmatter.get("tags", []) or [])
+        body = parsed.content.casefold()
+        score = _match_score(
+            phrase=phrase,
+            terms=terms,
+            path=rel.casefold(),
+            title=title,
+            tags=tags,
+            body=body,
+        )
+        if score <= 0:
             continue
 
         slug = rel[:-3] if rel.endswith(".md") else rel
-        results.append({
+        scored_results.append((score, {
             "path": rel,
             "title": parsed.frontmatter.get("title") or title_from_content(parsed.content),
             "type": parsed.frontmatter.get("type"),
@@ -110,8 +161,9 @@ def search_wiki(
             "confidence": parsed.frontmatter.get("confidence"),
             "indexed": slug in indexed if is_formal else False,
             "snippet": _snippet(text, terms),
-        })
-        if len(results) >= limit:
-            break
+            "score": score,
+        }))
 
+    scored_results.sort(key=lambda item: (-item[0], item[1]["path"]))
+    results = [result for _, result in scored_results[:limit]]
     return {"query": query, "scope": scope, "count": len(results), "results": results}

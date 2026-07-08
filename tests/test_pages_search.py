@@ -32,3 +32,21 @@ def test_search_wiki_returns_metadata(sample_wiki: Path) -> None:
     first = result["results"][0]
     assert first["path"] == "domains/agent/concepts/example.md"
     assert first["indexed"] is True
+    assert first["score"] > 0
+
+
+def test_search_wiki_long_query_uses_partial_ranked_matches(sample_wiki: Path) -> None:
+    result = search_wiki(
+        WikiPaths(sample_wiki),
+        "LangGraph interrupt missing-term",
+        scope="formal",
+        domain="agent",
+    )
+    assert result["count"] == 1
+    assert result["results"][0]["path"] == "domains/agent/concepts/example.md"
+
+
+def test_search_wiki_matches_raw_source_path_tokens(sample_wiki: Path) -> None:
+    result = search_wiki(WikiPaths(sample_wiki), "10-AI example", scope="raw")
+    assert result["count"] == 1
+    assert result["results"][0]["path"] == "raw/10-AI/example.md"
