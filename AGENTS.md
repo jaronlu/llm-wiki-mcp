@@ -11,8 +11,8 @@ CI configuration is in `.github/workflows/ci.yml`.
 
 ## Architecture & Design Source
 
-Use [docs/design.md](docs/design.md) as the design entrypoint. It links to the
-personal wiki design draft when the local symlink target is available. This repo
+Use [docs/wiki-mcp/README.md](docs/wiki-mcp/README.md) as the design entrypoint.
+It links to the personal wiki design docs when the local symlink target is available. This repo
 uses design-driven coding: for tool, permission, workflow, or data-shape changes,
 read the spec before editing code. If the spec is wrong or incomplete, update it
 first, then implement code and tests to match it.
