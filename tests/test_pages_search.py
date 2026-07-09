@@ -67,4 +67,14 @@ def test_search_wiki_long_query_uses_partial_ranked_matches(sample_wiki: Path) -
 def test_search_wiki_matches_raw_source_path_tokens(sample_wiki: Path) -> None:
     result = search_wiki(WikiPaths(sample_wiki), "10-AI example", scope="raw")
     assert result["count"] == 1
+    assert result["next_action"] == "read_raw_source"
     assert result["results"][0]["path"] == "raw/10-AI/example.md"
+
+
+def test_search_wiki_scope_all_prefers_formal_pages(sample_wiki: Path) -> None:
+    result = search_wiki(WikiPaths(sample_wiki), "LangGraph raw source", scope="all")
+
+    assert result["count"] == 2
+    assert result["next_action"] == "read_page"
+    assert result["results"][0]["path"] == "domains/agent/concepts/example.md"
+    assert result["results"][1]["path"] == "raw/10-AI/example.md"

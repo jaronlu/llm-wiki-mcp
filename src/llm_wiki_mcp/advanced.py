@@ -166,6 +166,14 @@ def _chunk_text(text: str, chunk_chars: int) -> list[tuple[int, str]]:
     return chunks or [(0, text[:chunk_chars])]
 
 
+def _read_next_action(paths: WikiPaths, results: list[dict[str, Any]]) -> str:
+    """Choose the read tool that matches the first semantic search result zone."""
+
+    if not results:
+        return "refine_query"
+    return "read_page" if paths.is_formal_page(results[0]["path"]) else "read_raw_source"
+
+
 def semantic_search(
     paths: WikiPaths,
     query: str,
@@ -221,14 +229,22 @@ def semantic_search(
                 }
             )
 
-    results.sort(key=lambda item: (-item["score"], item["path"], item["chunk_index"]))
+    results.sort(
+        key=lambda item: (
+            0 if paths.is_formal_page(item["path"]) else 1,
+            -item["score"],
+            item["path"],
+            item["chunk_index"],
+        )
+    )
+    limited_results = results[:limit]
     return {
-        **response_envelope(next_action="read_page" if results else "refine_query"),
+        **response_envelope(next_action=_read_next_action(paths, limited_results)),
         "query": query,
         "scope": scope,
         "embedding": "local-token-vector",
-        "count": min(len(results), limit),
-        "results": results[:limit],
+        "count": len(limited_results),
+        "results": limited_results,
     }
 
 

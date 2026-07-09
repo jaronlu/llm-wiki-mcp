@@ -98,6 +98,16 @@ def _match_score(
     return score
 
 
+def _read_next_action(paths: WikiPaths, results: list[dict[str, Any]]) -> str:
+    """Choose the read tool that matches the first search result zone."""
+
+    if not results:
+        return "refine_query"
+    return (
+        "read_page" if paths.is_formal_page(results[0]["path"]) else "read_raw_source"
+    )
+
+
 def search_wiki(
     paths: WikiPaths,
     query: str,
@@ -125,7 +135,7 @@ def search_wiki(
     terms = _query_terms(query)
     phrase = query.casefold().strip()
     indexed = _load_indexed_slugs(paths)
-    scored_results: list[tuple[int, dict[str, Any]]] = []
+    scored_results: list[tuple[int, int, dict[str, Any]]] = []
 
     for file_path in _iter_markdown(paths.root, dirs):
         rel = paths.rel(file_path)
@@ -154,28 +164,27 @@ def search_wiki(
             continue
 
         slug = rel[:-3] if rel.endswith(".md") else rel
-        scored_results.append(
-            (
-                score,
-                {
-                    "path": rel,
-                    "title": parsed.frontmatter.get("title")
-                    or title_from_content(parsed.content),
-                    "type": parsed.frontmatter.get("type"),
-                    "tags": parsed.frontmatter.get("tags", []) or [],
-                    "sources": parsed.frontmatter.get("sources", []) or [],
-                    "confidence": parsed.frontmatter.get("confidence"),
-                    "indexed": slug in indexed if is_formal else False,
-                    "snippet": _snippet(text, terms),
-                    "score": score,
-                },
-            )
-        )
+        scored_results.append((
+            0 if is_formal else 1,
+            score,
+            {
+                "path": rel,
+                "title": parsed.frontmatter.get("title")
+                or title_from_content(parsed.content),
+                "type": parsed.frontmatter.get("type"),
+                "tags": parsed.frontmatter.get("tags", []) or [],
+                "sources": parsed.frontmatter.get("sources", []) or [],
+                "confidence": parsed.frontmatter.get("confidence"),
+                "indexed": slug in indexed if is_formal else False,
+                "snippet": _snippet(text, terms),
+                "score": score,
+            },
+        ))
 
-    scored_results.sort(key=lambda item: (-item[0], item[1]["path"]))
-    results = [result for _, result in scored_results[:limit]]
+    scored_results.sort(key=lambda item: (item[0], -item[1], item[2]["path"]))
+    results = [result for _, _, result in scored_results[:limit]]
     return {
-        **response_envelope(next_action="read_page" if results else "refine_query"),
+        **response_envelope(next_action=_read_next_action(paths, results)),
         "query": query,
         "scope": scope,
         "count": len(results),
