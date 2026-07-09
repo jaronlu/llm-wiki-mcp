@@ -1,0 +1,1 @@
+../../../../llm-wiki/raw/10-AI/llm-wiki-mcp-design.md
