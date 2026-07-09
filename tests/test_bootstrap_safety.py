@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from llm_wiki_mcp import config as config_module
 from llm_wiki_mcp.bootstrap import init_wiki, inspect_wiki
 from llm_wiki_mcp.config import load_config
 
@@ -84,32 +85,30 @@ def test_bootstrap_uses_configured_wiki_directories(tmp_path: Path) -> None:
 def test_default_config_uses_home_relative_wiki_root(
     tmp_path: Path, monkeypatch
 ) -> None:
-    monkeypatch.delenv("LLM_WIKI_MCP_CONFIG", raising=False)
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(config_module, "PROJECT_CONFIG_PATH", tmp_path / "missing.yaml")
+    monkeypatch.chdir(Path("/"))
     config = load_config()
     assert config.wiki_root == Path.home() / "llm-wiki"
     assert config.init_wiki_root is None
     assert config.allow_write_raw is False
 
 
-def test_default_config_reads_local_config_yaml(tmp_path: Path, monkeypatch) -> None:
-    monkeypatch.delenv("LLM_WIKI_MCP_CONFIG", raising=False)
+def test_default_config_reads_project_config_yaml(tmp_path: Path, monkeypatch) -> None:
     wiki_root = tmp_path / "wiki"
     init_root = tmp_path / "init-wiki"
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     (config_dir / "config.yaml").write_text(
-        "\n".join(
-            [
-                f"wiki_root: {wiki_root}",
-                f"init_wiki_root: {init_root}",
-                "allow_write_raw: true",
-                "",
-            ]
-        )
+        "\n".join([
+            f"wiki_root: {wiki_root}",
+            f"init_wiki_root: {init_root}",
+            "allow_write_raw: true",
+            "",
+        ])
     )
 
-    monkeypatch.chdir(tmp_path)
+    monkeypatch.chdir(Path("/"))
+    monkeypatch.setattr(config_module, "PROJECT_CONFIG_PATH", config_dir / "config.yaml")
     config = load_config()
 
     assert config.wiki_root == wiki_root
@@ -117,11 +116,16 @@ def test_default_config_reads_local_config_yaml(tmp_path: Path, monkeypatch) -> 
     assert config.allow_write_raw is True
 
 
-def test_config_file_and_env_root_override(tmp_path: Path, monkeypatch) -> None:
-    config_path = tmp_path / "llm-wiki-mcp.yaml"
+def test_config_reads_project_config_not_cwd_config(
+    tmp_path: Path, monkeypatch
+) -> None:
+    project_config = tmp_path / "project" / "config" / "config.yaml"
+    cwd_config = tmp_path / "cwd" / "config" / "config.yaml"
+    project_config.parent.mkdir(parents=True)
+    cwd_config.parent.mkdir(parents=True)
     configured_root = tmp_path / "configured-wiki"
-    override_root = tmp_path / "override-wiki"
-    config_path.write_text(
+    cwd_root = tmp_path / "cwd-wiki"
+    project_config.write_text(
         "\n".join(
             [
                 f"wiki_root: {configured_root}",
@@ -132,27 +136,34 @@ def test_config_file_and_env_root_override(tmp_path: Path, monkeypatch) -> None:
             ]
         )
     )
+    cwd_config.write_text(
+        "\n".join(
+            [
+                f"wiki_root: {cwd_root}",
+                "allow_write_raw: true",
+                "",
+            ]
+        )
+    )
 
-    config = load_config(config_path)
+    monkeypatch.chdir(cwd_config.parents[1])
+    monkeypatch.setattr(config_module, "PROJECT_CONFIG_PATH", project_config)
+
+    config = load_config()
+
     assert config.wiki_root == configured_root
     assert config.init_wiki_root == tmp_path / "init-target"
     assert config.allow_write_raw is False
     assert config.formal_dirs == ("domains", "entities", "projects")
 
-    monkeypatch.setenv("LLM_WIKI_ROOT", str(override_root))
-    monkeypatch.setenv("LLM_WIKI_INIT_ROOT", str(tmp_path / "init-override"))
-    override = load_config(config_path)
-    assert override.wiki_root == override_root
-    assert override.init_wiki_root == tmp_path / "init-override"
-    assert override.allow_write_raw is False
 
-
-def test_config_rejects_unknown_fields(tmp_path: Path) -> None:
+def test_config_rejects_unknown_fields(tmp_path: Path, monkeypatch) -> None:
     config_path = tmp_path / "config.yaml"
     config_path.write_text("wiki_root: ~/wiki\nunknown_field: true\n")
 
     with pytest.raises(ValueError, match="Unknown config field"):
-        load_config(config_path)
+        monkeypatch.setattr(config_module, "PROJECT_CONFIG_PATH", config_path)
+        load_config()
 
 
 @pytest.mark.parametrize(
@@ -164,22 +175,24 @@ def test_config_rejects_unknown_fields(tmp_path: Path) -> None:
     ],
 )
 def test_config_rejects_invalid_directory_fields(
-    tmp_path: Path, field: str, value: str
+    tmp_path: Path, monkeypatch, field: str, value: str
 ) -> None:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(f"{field}: {value}\n")
 
     with pytest.raises(ValueError, match=field):
-        load_config(config_path)
+        monkeypatch.setattr(config_module, "PROJECT_CONFIG_PATH", config_path)
+        load_config()
 
 
 @pytest.mark.parametrize("value", ["0", "-1", "false", "not-a-number", "1.5"])
-def test_config_rejects_invalid_log_retention(tmp_path: Path, value: str) -> None:
+def test_config_rejects_invalid_log_retention(tmp_path: Path, monkeypatch, value: str) -> None:
     config_path = tmp_path / "config.yaml"
     config_path.write_text(f"log_retention_entries: {value}\n")
 
     with pytest.raises(ValueError, match="log_retention_entries"):
-        load_config(config_path)
+        monkeypatch.setattr(config_module, "PROJECT_CONFIG_PATH", config_path)
+        load_config()
 
 
 def test_open_source_files_do_not_contain_local_private_markers() -> None:

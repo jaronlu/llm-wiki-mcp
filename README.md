@@ -74,23 +74,9 @@ Local development mode:
 command = "uv"
 args = ["--directory", "/path/to/llm-wiki-mcp", "run", "llm-wiki-mcp"]
 startup_timeout_sec = 120
-
-[mcp_servers.llm_wiki.env]
-LLM_WIKI_MCP_CONFIG = "/path/to/llm-wiki-mcp/config/config.yaml"
 ```
 
-Single-root override mode:
-
-```toml
-[mcp_servers.llm_wiki]
-command = "uv"
-args = ["--directory", "/path/to/llm-wiki-mcp", "run", "llm-wiki-mcp"]
-startup_timeout_sec = 120
-
-[mcp_servers.llm_wiki.env]
-LLM_WIKI_ROOT = "/path/to/wiki"
-LLM_WIKI_INIT_ROOT = "/path/to/init-wiki"
-```
+The server always reads configuration from `<repo>/config/config.yaml`; no MCP host environment variable is needed.
 
 ## MCP tools
 
@@ -102,6 +88,11 @@ Bootstrap and reading:
 - `semantic_search` (local deterministic baseline)
 - `read_page`
 - `read_raw_source`
+
+Capture and controlled writes:
+
+- `create_raw_source`
+- `append_log`
 - `sync` (requires `allow_write_formal: true`)
 
 Candidate-first maintenance:
@@ -143,10 +134,9 @@ candidate-first.
 Config loading order:
 
 1. Built-in defaults.
-2. Local `config/config.yaml`, then root `config.yaml`, when present.
-3. YAML file from `LLM_WIKI_MCP_CONFIG`.
-4. `LLM_WIKI_ROOT`, overriding `wiki_root`.
-5. `LLM_WIKI_INIT_ROOT`, overriding `init_wiki_root`.
+2. Project-local `config/config.yaml`, when present.
+
+The server intentionally ignores MCP host config path environment variables and root override environment variables, so the runtime source of truth stays in the repository-local config file.
 
 Config validation rejects unknown top-level fields, nested directory names,
 empty directory lists, and non-positive `log_retention_entries` values.

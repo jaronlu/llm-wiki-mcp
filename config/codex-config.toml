@@ -2,6 +2,3 @@
 command = "uv"
 args = ["--directory", "/path/to/llm-wiki-mcp", "run", "llm-wiki-mcp"]
 startup_timeout_sec = 120
-
-[mcp_servers.llm_wiki.env]
-LLM_WIKI_MCP_CONFIG = "/path/to/llm-wiki-mcp/config/config.yaml"

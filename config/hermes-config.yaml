@@ -3,8 +3,6 @@ mcp_servers:
     command: "uvx"
     args:
       - "llm-wiki-mcp"
-    env:
-      LLM_WIKI_MCP_CONFIG: "/path/to/llm-wiki-mcp/config/config.yaml"
     timeout: 120
     connect_timeout: 60
 
@@ -17,5 +15,3 @@ mcp_servers:
 #       - "/path/to/llm-wiki-mcp"
 #       - "run"
 #       - "llm-wiki-mcp"
-#     env:
-#       LLM_WIKI_MCP_CONFIG: "/path/to/llm-wiki-mcp/config/config.yaml"

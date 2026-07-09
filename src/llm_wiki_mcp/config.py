@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-# Used only when neither YAML config nor environment variables provide a root.
+# Used only when the project-local YAML config is absent or omits wiki_root.
 FALLBACK_WIKI_ROOT = Path.home() / "llm-wiki"
-LOCAL_CONFIG_PATHS = (Path("config/config.yaml"), Path("config.yaml"))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_CONFIG_PATH = PROJECT_ROOT / "config" / "config.yaml"
 CONFIG_KEYS = {
     "wiki_root",
     "init_wiki_root",
@@ -113,20 +113,6 @@ def _as_positive_int(value: Any, default: int, field: str) -> int:
     return parsed
 
 
-def _resolve_config_path(config_path: str | Path | None = None) -> Path | None:
-    """Resolve explicit, environment, or local config path in precedence order."""
-
-    if config_path is not None:
-        return Path(config_path).expanduser()
-    env_path = os.environ.get("LLM_WIKI_MCP_CONFIG")
-    if env_path:
-        return Path(env_path).expanduser()
-    for path in LOCAL_CONFIG_PATHS:
-        if path.exists():
-            return path
-    return None
-
-
 def _validate_config_keys(data: dict[str, Any], path: Path) -> None:
     """Reject unknown top-level config fields."""
 
@@ -136,24 +122,20 @@ def _validate_config_keys(data: dict[str, Any], path: Path) -> None:
         raise ValueError(f"Unknown config field(s) in {path}: {joined}")
 
 
-def load_config(config_path: str | Path | None = None) -> Config:
-    """Load config from defaults, optional YAML, then environment overrides."""
+def load_config() -> Config:
+    """Load config only from the project-local config/config.yaml file."""
 
     data: dict[str, Any] = {}
-    path = _resolve_config_path(config_path)
-    if path is not None:
-        if path.exists():
-            loaded = yaml.safe_load(path.read_text()) or {}
-            if not isinstance(loaded, dict):
-                raise ValueError(f"Config file must contain a mapping: {path}")
-            _validate_config_keys(loaded, path)
-            data.update(loaded)
+    path = PROJECT_CONFIG_PATH
+    if path.exists():
+        loaded = yaml.safe_load(path.read_text()) or {}
+        if not isinstance(loaded, dict):
+            raise ValueError(f"Config file must contain a mapping: {path}")
+        _validate_config_keys(loaded, path)
+        data.update(loaded)
 
-    wiki_root_value = os.environ.get("LLM_WIKI_ROOT") or data.get("wiki_root")
-    wiki_root = _as_path(wiki_root_value, FALLBACK_WIKI_ROOT)
-    init_wiki_root = _as_optional_path(
-        os.environ.get("LLM_WIKI_INIT_ROOT", data.get("init_wiki_root"))
-    )
+    wiki_root = _as_path(data.get("wiki_root"), FALLBACK_WIKI_ROOT)
+    init_wiki_root = _as_optional_path(data.get("init_wiki_root"))
     return Config(
         wiki_root=wiki_root,
         init_wiki_root=init_wiki_root,
