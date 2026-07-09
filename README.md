@@ -36,7 +36,6 @@ Edit `config/config.yaml` for your machine. Keep that file local and untracked.
 
 ```yaml
 wiki_root: ~/llm-wiki
-init_wiki_root:
 allow_write_raw: false
 allow_write_formal: false
 allow_update_index: false
@@ -98,6 +97,8 @@ empty directory lists, and non-positive `log_retention_entries` values.
 ## Safety Boundaries
 
 - All paths must resolve under `wiki_root`.
+- `init_wiki` creates or completes `wiki_root` by default when no explicit
+  `root` argument is provided.
 - `raw/` writes are create-only and never overwrite existing files.
 - Formal page writes require `allow_write_formal: true`; `index.md` updates,
   migrations, and public exports are candidate-first.

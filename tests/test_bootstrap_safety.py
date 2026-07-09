@@ -89,19 +89,16 @@ def test_default_config_uses_home_relative_wiki_root(
     monkeypatch.chdir(Path("/"))
     config = load_config()
     assert config.wiki_root == Path.home() / "llm-wiki"
-    assert config.init_wiki_root is None
     assert config.allow_write_raw is False
 
 
 def test_default_config_reads_project_config_yaml(tmp_path: Path, monkeypatch) -> None:
     wiki_root = tmp_path / "wiki"
-    init_root = tmp_path / "init-wiki"
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     (config_dir / "config.yaml").write_text(
         "\n".join([
             f"wiki_root: {wiki_root}",
-            f"init_wiki_root: {init_root}",
             "allow_write_raw: true",
             "",
         ])
@@ -112,7 +109,6 @@ def test_default_config_reads_project_config_yaml(tmp_path: Path, monkeypatch) -
     config = load_config()
 
     assert config.wiki_root == wiki_root
-    assert config.init_wiki_root == init_root
     assert config.allow_write_raw is True
 
 
@@ -129,7 +125,6 @@ def test_config_reads_project_config_not_cwd_config(
         "\n".join(
             [
                 f"wiki_root: {configured_root}",
-                f"init_wiki_root: {tmp_path / 'init-target'}",
                 "allow_write_raw: false",
                 "formal_dirs: [domains, entities, projects]",
                 "",
@@ -152,7 +147,6 @@ def test_config_reads_project_config_not_cwd_config(
     config = load_config()
 
     assert config.wiki_root == configured_root
-    assert config.init_wiki_root == tmp_path / "init-target"
     assert config.allow_write_raw is False
     assert config.formal_dirs == ("domains", "entities", "projects")
 

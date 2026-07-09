@@ -14,7 +14,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PROJECT_CONFIG_PATH = PROJECT_ROOT / "config" / "config.yaml"
 CONFIG_KEYS = {
     "wiki_root",
-    "init_wiki_root",
     "allow_write_raw",
     "allow_write_formal",
     "allow_update_index",
@@ -31,7 +30,6 @@ class Config:
     """Runtime configuration and permission switches for the MCP server."""
 
     wiki_root: Path = FALLBACK_WIKI_ROOT
-    init_wiki_root: Path | None = None
     allow_write_raw: bool = False
     allow_write_formal: bool = False
     allow_update_index: bool = False
@@ -77,14 +75,6 @@ def _as_dir_tuple(value: Any, default: tuple[str, ...], field: str) -> tuple[str
                 f"{field} entries must be top-level relative directories: {item}"
             )
     return normalized
-
-
-def _as_optional_path(value: Any) -> Path | None:
-    """Coerce a YAML/env path into an expanded Path when present."""
-
-    if value is None or str(value).strip() == "":
-        return None
-    return Path(str(value)).expanduser()
 
 
 def _as_path(value: Any, default: Path) -> Path:
@@ -135,10 +125,8 @@ def load_config() -> Config:
         data.update(loaded)
 
     wiki_root = _as_path(data.get("wiki_root"), FALLBACK_WIKI_ROOT)
-    init_wiki_root = _as_optional_path(data.get("init_wiki_root"))
     return Config(
         wiki_root=wiki_root,
-        init_wiki_root=init_wiki_root,
         allow_write_raw=_as_bool(data.get("allow_write_raw"), False),
         allow_write_formal=_as_bool(data.get("allow_write_formal"), False),
         allow_update_index=_as_bool(data.get("allow_update_index"), False),

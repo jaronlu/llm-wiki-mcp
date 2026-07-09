@@ -81,7 +81,7 @@ def init_wiki(
     """Create missing llm-wiki files/directories for a new wiki root."""
 
     def run() -> dict[str, Any]:
-        target_root = root or str(config.init_wiki_root or paths.root)
+        target_root = root or str(paths.root)
         return bootstrap.init_wiki(
             target_root,
             profile=profile,
