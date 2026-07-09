@@ -6,6 +6,8 @@ candidate-first formal pages, index updates, logs, lint, and governance tools.
 The server is designed for personal or team knowledge bases where agents should
 help organize knowledge without getting broad, unsafe filesystem write access.
 
+![LLM Wiki MCP workflow example](docs/assets/llm-wiki-exc.png)
+
 ## Workflow
 
 ```text
