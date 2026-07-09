@@ -5,8 +5,11 @@ from pathlib import Path
 import yaml
 
 from llm_wiki_mcp.candidates import (
+    apply_candidate,
+    compile_page,
     create_formal_page_candidate,
     create_update_candidate,
+    load_candidate,
     update_index_candidate,
 )
 from llm_wiki_mcp.paths import WikiPaths
@@ -267,3 +270,55 @@ def test_create_update_candidate_rejects_nonexistent_page(sample_wiki: Path) -> 
         assert "target page not found" in str(exc)
     else:
         raise AssertionError("expected FileNotFoundError")
+
+
+def test_compile_page_persists_candidate_bundle_and_apply_writes_atomically(
+    sample_wiki: Path,
+) -> None:
+    paths = WikiPaths(sample_wiki)
+
+    candidate = compile_page(
+        paths,
+        source="raw/10-AI/example.md",
+        topic="Raw Example Formal",
+        domain="agent",
+        tags=["ai", "agent"],
+    )
+    cached = load_candidate(paths, candidate["candidate_id"])
+    applied = apply_candidate(
+        paths,
+        candidate["candidate_id"],
+        approved=True,
+        expected_status="approved",
+    )
+
+    assert cached["status"] == "pending_review"
+    assert cached["bundle"]["content_hash"] == candidate["bundle"]["content_hash"]
+    assert cached["bundle"]["ops"][0]["op"] == "write_formal_page"
+    assert applied["transaction"] == {"atomic": True, "rolled_back": False}
+    assert (sample_wiki / "domains/agent/concepts/raw-example-formal.md").is_file()
+    assert "raw-example-formal" in (sample_wiki / "index.md").read_text()
+    assert "compile | domains/agent/concepts/raw-example-formal.md" in (
+        sample_wiki / "log.md"
+    ).read_text()
+    assert (sample_wiki / ".llm-wiki/source-manifest.json").is_file()
+
+
+def test_apply_candidate_rejects_stale_base_hash(sample_wiki: Path) -> None:
+    paths = WikiPaths(sample_wiki)
+    candidate = compile_page(
+        paths,
+        source="raw/10-AI/example.md",
+        topic="Stale Candidate",
+        domain="agent",
+    )
+    (sample_wiki / "index.md").write_text("# Changed\n")
+
+    try:
+        apply_candidate(paths, candidate["candidate_id"], approved=True)
+    except RuntimeError as exc:
+        assert "STALE_CANDIDATE: index.md" in str(exc)
+    else:
+        raise AssertionError("expected stale candidate rejection")
+
+    assert load_candidate(paths, candidate["candidate_id"])["status"] == "stale"

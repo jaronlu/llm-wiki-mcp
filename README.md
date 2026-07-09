@@ -11,36 +11,18 @@ help organize knowledge without getting broad, unsafe filesystem write access.
 ```text
 New / revised source added
         ↓
-detect_new_source
+compile_page or create_update_candidate
         ↓
-find_referencing_pages
-        │
-        ├── 0 pages
-        │       ↓
-        │ create_formal_page_candidate
-        │
-        ├── 1 page
-        │       ↓
-        │ create_update_candidate
-        │
-        └── N pages
-                ↓
-        create_update_candidate per affected page
-                ↓
-Review candidate(s) as a bundle
-                ↓
-Apply outside this server after explicit approval
-                ↓
-update_source_manifest
-                ↓
-append_log
-                ↓
+Review Candidate bundle
+        ↓
+apply_candidate after explicit approval
+        ↓
 run_lint
 ```
 
-Most maintenance tools return candidates first (`would_write=false`), so humans
-can review page, index, public-draft, and log changes before anything touches
-the wiki.
+Compile and update workflows return persisted Candidate bundles first, so humans
+can review page, index, public-draft, log, and source-manifest changes before
+anything touches the formal wiki.
 
 ## Quick Start
 
@@ -80,54 +62,26 @@ The server always reads configuration from `<repo>/config/config.yaml`; no MCP h
 
 ## MCP tools
 
-Bootstrap and reading:
+Public tools:
 
 - `init_wiki`
 - `inspect_wiki`
 - `search_wiki`
-- `semantic_search` (local deterministic baseline)
 - `read_page`
 - `read_raw_source`
-
-Capture and controlled writes:
-
 - `create_raw_source`
 - `append_log`
-- `sync` (requires `allow_write_formal: true`)
-
-Candidate-first maintenance:
-
-- `create_formal_page_candidate`
+- `compile_page`
 - `create_update_candidate`
-- `update_index_candidate`
-- `create_log_candidate`
-- `compile_raw_to_formal_draft`
-- `write_public_draft`
-- `standardize_page_candidate`
-
-Governance:
-
+- `apply_candidate`
 - `run_lint`
-- `validate_frontmatter`
-- `validate_public_safety`
-- `find_related_pages`
-- `suggest_wikilinks`
-- `classify_source_candidate`
-- `detect_new_source`
-- `find_referencing_pages`
-- `update_source_manifest`
-- `find_uncompiled_sources`
-- `find_duplicate_topics`
-- `find_stale_pages`
-- `find_low_confidence_pages`
-- `suggest_merge_candidates`
 - `knowledge_health_review`
-- `audit_wiki_structure`
+- `write_public_draft`
+- `validate_public_safety`
 
 Mutation tools are conservative by default. Raw writes are disabled unless
-`allow_write_raw: true`; domain file sync is disabled unless
-`allow_write_formal: true`; index updates and public exports stay
-candidate-first.
+`allow_write_raw: true`; applying Candidate bundles is disabled unless
+`allow_write_formal: true`; public exports stay candidate-first.
 
 ## Configuration
 
