@@ -4,7 +4,7 @@
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
-![Tests](https://img.shields.io/badge/tests-87%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-94%20passing-brightgreen)
 
 一个给 AI agent 用的 MCP server，让 agent 有一个受管理的 wiki，而不是在文件系统里为所欲为。它介于"全权开放"和"只读限制"之间——正式 wiki 的任何写入，都需要经过你的批准。
 
@@ -80,7 +80,25 @@ allow_modify_schema: false
 log_retention_entries: 120
 formal_dirs: [domains, entities]
 raw_dirs: [raw]
+workshop_dirs: [workshop]
 non_formal_dirs: [drafts, reading]
+```
+
+`workshop_dirs` 用于启用项目包：项目根 `README.md` 是正式 entity
+页面，项目内 `raw/` 保存原始项目证据。
+
+```text
+llm-wiki/
+├── workshop/
+│   ├── agentic-rag-securities/
+│   │   ├── README.md
+│   │   └── raw/
+│   └── wiki-mcp/
+│       ├── README.md
+│       └── raw/
+├── domains/
+├── entities/
+└── raw/
 ```
 
 ---

@@ -109,6 +109,43 @@ def test_create_formal_page_candidate_rejects_raw_source_path(
         raise AssertionError("expected ValueError")
 
 
+def test_create_formal_page_candidate_accepts_workshop_entrypoint(
+    sample_wiki: Path,
+) -> None:
+    result = create_formal_page_candidate(
+        WikiPaths(sample_wiki),
+        path="workshop/new-project/README.md",
+        title="New Workshop Project",
+        page_type="entity",
+        tags=["ai"],
+        sources=["raw/10-AI/example.md"],
+        confidence="medium",
+        body="# New Workshop Project\n",
+    )
+    assert result["path"] == "workshop/new-project/README.md"
+    assert result["would_write"] is False
+
+
+def test_create_formal_page_candidate_rejects_workshop_raw_path(
+    sample_wiki: Path,
+) -> None:
+    try:
+        create_formal_page_candidate(
+            WikiPaths(sample_wiki),
+            path="workshop/new-project/raw/not-formal.md",
+            title="Bad Workshop Page",
+            page_type="entity",
+            tags=["ai"],
+            sources=["raw/10-AI/example.md"],
+            confidence="medium",
+            body="# Bad\n",
+        )
+    except ValueError as exc:
+        assert "formal page candidate must be under configured formal_dirs" in str(exc)
+    else:
+        raise AssertionError("expected ValueError")
+
+
 def test_create_formal_page_candidate_uses_page_types_from_schema(
     sample_wiki: Path,
 ) -> None:

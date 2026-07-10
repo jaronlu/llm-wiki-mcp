@@ -21,6 +21,7 @@ CONFIG_KEYS = {
     "log_retention_entries",
     "formal_dirs",
     "raw_dirs",
+    "workshop_dirs",
     "non_formal_dirs",
 }
 
@@ -37,6 +38,7 @@ class Config:
     log_retention_entries: int = 120
     formal_dirs: tuple[str, ...] = ("domains", "entities")
     raw_dirs: tuple[str, ...] = ("raw",)
+    workshop_dirs: tuple[str, ...] = ("workshop",)
     non_formal_dirs: tuple[str, ...] = ("drafts", "reading")
 
 
@@ -138,6 +140,9 @@ def load_config() -> Config:
             data.get("formal_dirs"), ("domains", "entities"), "formal_dirs"
         ),
         raw_dirs=_as_dir_tuple(data.get("raw_dirs"), ("raw",), "raw_dirs"),
+        workshop_dirs=_as_dir_tuple(
+            data.get("workshop_dirs"), ("workshop",), "workshop_dirs"
+        ),
         non_formal_dirs=_as_dir_tuple(
             data.get("non_formal_dirs"), ("drafts", "reading"), "non_formal_dirs"
         ),

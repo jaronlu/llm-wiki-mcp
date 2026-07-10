@@ -4,21 +4,11 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from .frontmatter import parse_markdown, title_from_content
 from .paths import WikiPaths
 from .responses import response_envelope
-
-
-def _iter_markdown(root: Path, dirs: Iterable[str]) -> Iterable[Path]:
-    """Yield markdown files under selected top-level directories if present."""
-
-    for dirname in dirs:
-        base = root / dirname
-        if not base.exists():
-            continue
-        yield from base.rglob("*.md")
 
 
 def _load_indexed_slugs(paths: WikiPaths) -> set[str]:
@@ -126,18 +116,18 @@ def search_wiki(
     if limit <= 0:
         raise ValueError("limit must be positive")
 
-    dirs: list[str] = []
+    files: list[Path] = []
     if scope in {"formal", "all"}:
-        dirs.extend(paths.formal_dirs)
+        files.extend(paths.iter_formal_pages())
     if scope in {"raw", "all"}:
-        dirs.extend(paths.raw_dirs)
+        files.extend(paths.iter_raw_sources())
 
     terms = _query_terms(query)
     phrase = query.casefold().strip()
     indexed = _load_indexed_slugs(paths)
     scored_results: list[tuple[int, int, dict[str, Any]]] = []
 
-    for file_path in _iter_markdown(paths.root, dirs):
+    for file_path in sorted(set(files)):
         rel = paths.rel(file_path)
         if rel.startswith("domains/") and not _matches_domain(paths, file_path, domain):
             continue

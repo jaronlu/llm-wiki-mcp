@@ -4,7 +4,7 @@
 
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
-![Tests](https://img.shields.io/badge/tests-87%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-94%20passing-brightgreen)
 
 An MCP server that gives your AI agents a governed wiki instead of unrestricted filesystem access. It sits between "full power" and "read-only" by requiring human approval before any formal wiki page gets updated.
 
@@ -80,7 +80,25 @@ allow_modify_schema: false
 log_retention_entries: 120
 formal_dirs: [domains, entities]
 raw_dirs: [raw]
+workshop_dirs: [workshop]
 non_formal_dirs: [drafts, reading]
+```
+
+`workshop_dirs` enables project packages whose root `README.md` is a formal
+entity page and whose `raw/` subtree contains project evidence:
+
+```text
+llm-wiki/
+├── workshop/
+│   ├── agentic-rag-securities/
+│   │   ├── README.md
+│   │   └── raw/
+│   └── wiki-mcp/
+│       ├── README.md
+│       └── raw/
+├── domains/
+├── entities/
+└── raw/
 ```
 
 ---

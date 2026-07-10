@@ -26,16 +26,12 @@ def _iter_formal_pages(paths: WikiPaths) -> list[Path]:
     """Return formal markdown pages under configured formal directories."""
 
     files: list[Path] = []
-    for dirname in paths.formal_dirs:
-        base = paths.root / dirname
-        if not base.exists():
+    for candidate in paths.iter_formal_pages():
+        try:
+            paths.rel(candidate)
+        except WikiPathError:
             continue
-        for candidate in sorted(base.rglob("*.md")):
-            try:
-                paths.rel(candidate)
-            except WikiPathError:
-                continue
-            files.append(candidate)
+        files.append(candidate)
     return files
 
 

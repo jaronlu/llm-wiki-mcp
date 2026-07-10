@@ -17,6 +17,7 @@ REQUIRED_FILES = (
 )
 DEFAULT_FORMAL_DIRS = ("domains", "entities")
 DEFAULT_RAW_DIRS = ("raw",)
+DEFAULT_WORKSHOP_DIRS = ("workshop",)
 DEFAULT_NON_FORMAL_DIRS = ("drafts", "reading")
 SYSTEM_DIRS = ("_meta", "scripts")
 
@@ -24,12 +25,15 @@ SYSTEM_DIRS = ("_meta", "scripts")
 def _required_dirs(
     formal_dirs: tuple[str, ...] = DEFAULT_FORMAL_DIRS,
     raw_dirs: tuple[str, ...] = DEFAULT_RAW_DIRS,
+    workshop_dirs: tuple[str, ...] = DEFAULT_WORKSHOP_DIRS,
     non_formal_dirs: tuple[str, ...] = DEFAULT_NON_FORMAL_DIRS,
 ) -> tuple[str, ...]:
     """Return configured wiki dirs plus required system dirs."""
 
     return tuple(
-        dict.fromkeys((*formal_dirs, *raw_dirs, *non_formal_dirs, *SYSTEM_DIRS))
+        dict.fromkeys(
+            (*formal_dirs, *raw_dirs, *workshop_dirs, *non_formal_dirs, *SYSTEM_DIRS)
+        )
     )
 
 
@@ -37,11 +41,13 @@ def _schema_template(
     language: str,
     formal_dirs: tuple[str, ...] = DEFAULT_FORMAL_DIRS,
     raw_dirs: tuple[str, ...] = DEFAULT_RAW_DIRS,
+    workshop_dirs: tuple[str, ...] = DEFAULT_WORKSHOP_DIRS,
     non_formal_dirs: tuple[str, ...] = DEFAULT_NON_FORMAL_DIRS,
 ) -> str:
     title = "Wiki Schema" if language == "en" else "Wiki Schema 规范"
     formal_text = ", ".join(f"`{dirname}/`" for dirname in formal_dirs)
     raw_text = ", ".join(f"`{dirname}/`" for dirname in raw_dirs)
+    workshop_text = ", ".join(f"`{dirname}/`" for dirname in workshop_dirs)
     non_formal_text = ", ".join(f"`{dirname}/`" for dirname in non_formal_dirs)
     return f"""# {title}
 
@@ -49,6 +55,7 @@ def _schema_template(
 
 - {raw_text}: immutable source materials.
 - {formal_text}: compiled knowledge pages organized by domain and page type.
+- {workshop_text}: project packages with formal README entrypoints and raw subdirectories.
 - {non_formal_text}: non-formal zones.
 
 ## Frontmatter
@@ -112,6 +119,9 @@ def _lint_template() -> str:
 root = Path(__file__).resolve().parents[1]
 formal = list((root / "domains").rglob("*.md")) if (root / "domains").exists() else []
 formal += list((root / "entities").rglob("*.md")) if (root / "entities").exists() else []
+workshop = root / "workshop"
+if workshop.exists():
+    formal += [path for path in workshop.glob("*/README.md") if path.is_file()]
 index = root / "index.md"
 log = root / "log.md"
 errors = []
@@ -135,6 +145,7 @@ def _template_for(
     language: str,
     formal_dirs: tuple[str, ...] = DEFAULT_FORMAL_DIRS,
     raw_dirs: tuple[str, ...] = DEFAULT_RAW_DIRS,
+    workshop_dirs: tuple[str, ...] = DEFAULT_WORKSHOP_DIRS,
     non_formal_dirs: tuple[str, ...] = DEFAULT_NON_FORMAL_DIRS,
 ) -> str:
     templates = {
@@ -142,6 +153,7 @@ def _template_for(
             language,
             formal_dirs=formal_dirs,
             raw_dirs=raw_dirs,
+            workshop_dirs=workshop_dirs,
             non_formal_dirs=non_formal_dirs,
         ),
         "AGENTS.md": _agents_template(language),
@@ -159,6 +171,7 @@ def init_wiki(
     language: str = "zh",
     formal_dirs: tuple[str, ...] = DEFAULT_FORMAL_DIRS,
     raw_dirs: tuple[str, ...] = DEFAULT_RAW_DIRS,
+    workshop_dirs: tuple[str, ...] = DEFAULT_WORKSHOP_DIRS,
     non_formal_dirs: tuple[str, ...] = DEFAULT_NON_FORMAL_DIRS,
 ) -> dict[str, Any]:
     """Create a minimal llm-wiki structure without overwriting existing files."""
@@ -172,7 +185,9 @@ def init_wiki(
     skipped: list[str] = []
     warnings: list[str] = []
 
-    required_dirs = _required_dirs(formal_dirs, raw_dirs, non_formal_dirs)
+    required_dirs = _required_dirs(
+        formal_dirs, raw_dirs, workshop_dirs, non_formal_dirs
+    )
     for dirname in required_dirs:
         path = root_path / dirname
         if path.exists():
@@ -194,6 +209,7 @@ def init_wiki(
                     language,
                     formal_dirs=formal_dirs,
                     raw_dirs=raw_dirs,
+                    workshop_dirs=workshop_dirs,
                     non_formal_dirs=non_formal_dirs,
                 )
             )
@@ -221,12 +237,15 @@ def inspect_wiki(
     root: str | Path,
     formal_dirs: tuple[str, ...] = DEFAULT_FORMAL_DIRS,
     raw_dirs: tuple[str, ...] = DEFAULT_RAW_DIRS,
+    workshop_dirs: tuple[str, ...] = DEFAULT_WORKSHOP_DIRS,
     non_formal_dirs: tuple[str, ...] = DEFAULT_NON_FORMAL_DIRS,
 ) -> dict[str, Any]:
     """Inspect whether a directory matches the configured llm-wiki structure."""
 
     root_path = Path(root).expanduser()
-    required_dirs = _required_dirs(formal_dirs, raw_dirs, non_formal_dirs)
+    required_dirs = _required_dirs(
+        formal_dirs, raw_dirs, workshop_dirs, non_formal_dirs
+    )
     missing: list[str] = []
     if not root_path.exists() or not root_path.is_dir():
         missing = [*REQUIRED_FILES, *required_dirs]
@@ -251,11 +270,26 @@ def inspect_wiki(
         base = root_path / dirname
         if base.exists():
             formal_pages.extend(base.rglob("*.md"))
+    for dirname in workshop_dirs:
+        base = root_path / dirname
+        if not base.exists():
+            continue
+        for project in base.iterdir():
+            entrypoint = project / "README.md"
+            if project.is_dir() and entrypoint.is_file():
+                formal_pages.append(entrypoint)
     raw_sources: list[Path] = []
     for dirname in raw_dirs:
         base = root_path / dirname
         if base.exists():
             raw_sources.extend(base.rglob("*.md"))
+    for dirname in workshop_dirs:
+        base = root_path / dirname
+        if not base.exists():
+            continue
+        for raw_dir in base.glob("*/raw"):
+            if raw_dir.is_dir():
+                raw_sources.extend(raw_dir.rglob("*.md"))
 
     return {
         **response_envelope(next_action="ready" if not missing else "run init_wiki"),

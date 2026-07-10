@@ -12,11 +12,11 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from .candidates import create_formal_page_candidate
 from .frontmatter import parse_markdown, title_from_content
-from .paths import WikiPathError, WikiPaths
+from .paths import WikiPaths
 from .related import find_related_pages
 from .responses import candidate_envelope, response_envelope
 
@@ -84,26 +84,11 @@ def _cosine(left: Counter[str], right: Counter[str]) -> float:
     return dot / (left_norm * right_norm)
 
 
-def _iter_markdown(paths: WikiPaths, dirs: Iterable[str]) -> Iterable[Path]:
-    """Yield markdown files under configured top-level directories."""
-
-    for dirname in dirs:
-        base = paths.root / dirname
-        if not base.exists():
-            continue
-        for candidate in sorted(base.rglob("*.md")):
-            try:
-                paths.rel(candidate)
-            except WikiPathError:
-                continue
-            yield candidate
-
-
 def _iter_formal_docs(paths: WikiPaths) -> list[PageDoc]:
     """Load all configured formal markdown pages."""
 
     docs: list[PageDoc] = []
-    for file_path in _iter_markdown(paths, paths.formal_dirs):
+    for file_path in paths.iter_formal_pages():
         text = file_path.read_text(errors="replace")
         parsed = parse_markdown(text)
         rel = paths.rel(file_path)
@@ -197,15 +182,15 @@ def semantic_search(
     if chunk_chars < 200:
         raise ValueError("chunk_chars must be >= 200")
 
-    dirs: list[str] = []
+    files: list[Path] = []
     if scope in {"formal", "all"}:
-        dirs.extend(paths.formal_dirs)
+        files.extend(paths.iter_formal_pages())
     if scope in {"raw", "all"}:
-        dirs.extend(paths.raw_dirs)
+        files.extend(paths.iter_raw_sources())
 
     query_vector = _token_counts(query)
     results: list[dict[str, Any]] = []
-    for file_path in _iter_markdown(paths, dirs):
+    for file_path in sorted(set(files)):
         rel = paths.rel(file_path)
         text = file_path.read_text(errors="replace")
         parsed = parse_markdown(text)
@@ -585,7 +570,7 @@ def detect_new_source(paths: WikiPaths, source: str | None = None) -> dict[str, 
     raw_files = (
         [paths.require_raw_path(source)]
         if source
-        else list(_iter_markdown(paths, paths.raw_dirs))
+        else paths.iter_raw_sources()
     )
     changes: list[dict[str, Any]] = []
     for file_path in raw_files:
@@ -636,7 +621,7 @@ def update_source_manifest(
     raw_files = (
         [paths.require_raw_path(source) for source in sources]
         if sources
-        else list(_iter_markdown(paths, paths.raw_dirs))
+        else paths.iter_raw_sources()
     )
     updated: list[str] = []
     for file_path in raw_files:
@@ -706,7 +691,7 @@ def find_uncompiled_sources(paths: WikiPaths) -> dict[str, Any]:
         sources = doc.frontmatter.get("sources", []) or []
         if isinstance(sources, list):
             referenced.update(str(source) for source in sources)
-    raw_sources = [paths.rel(path) for path in _iter_markdown(paths, paths.raw_dirs)]
+    raw_sources = [paths.rel(path) for path in paths.iter_raw_sources()]
     uncompiled = sorted(source for source in raw_sources if source not in referenced)
     return {
         **response_envelope(

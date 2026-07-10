@@ -47,8 +47,8 @@ def test_inspect_wiki_reports_missing_and_detected_counts(
     assert (
         complete_result["is_wiki"] is False
     )  # fixture intentionally lacks SCHEMA/AGENTS
-    assert complete_result["detected"]["formal_pages"] == 1
-    assert complete_result["detected"]["raw_sources"] == 1
+    assert complete_result["detected"]["formal_pages"] == 2
+    assert complete_result["detected"]["raw_sources"] == 2
     assert complete_result["detected"]["markdown_files"] >= 4
 
 
@@ -90,6 +90,7 @@ def test_default_config_uses_home_relative_wiki_root(
     config = load_config()
     assert config.wiki_root == Path.home() / "llm-wiki"
     assert config.allow_write_raw is False
+    assert config.workshop_dirs == ("workshop",)
 
 
 def test_default_config_reads_project_config_yaml(tmp_path: Path, monkeypatch) -> None:
@@ -127,6 +128,7 @@ def test_config_reads_project_config_not_cwd_config(
                 f"wiki_root: {configured_root}",
                 "allow_write_raw: false",
                 "formal_dirs: [domains, entities, projects]",
+                "workshop_dirs: [workshop, labs]",
                 "",
             ]
         )
@@ -149,6 +151,7 @@ def test_config_reads_project_config_not_cwd_config(
     assert config.wiki_root == configured_root
     assert config.allow_write_raw is False
     assert config.formal_dirs == ("domains", "entities", "projects")
+    assert config.workshop_dirs == ("workshop", "labs")
 
 
 def test_config_rejects_unknown_fields(tmp_path: Path, monkeypatch) -> None:
@@ -165,6 +168,7 @@ def test_config_rejects_unknown_fields(tmp_path: Path, monkeypatch) -> None:
     [
         ("formal_dirs", "[domains/nested]"),
         ("raw_dirs", "[]"),
+        ("workshop_dirs", "[workshop/nested]"),
         ("non_formal_dirs", "[drafts, 123]"),
     ],
 )

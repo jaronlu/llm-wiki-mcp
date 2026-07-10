@@ -10,6 +10,7 @@ def sample_wiki(tmp_path: Path) -> Path:
     root = tmp_path / "wiki"
     (root / "domains/agent/concepts").mkdir(parents=True)
     (root / "raw/10-AI").mkdir(parents=True)
+    (root / "workshop/example-project/raw").mkdir(parents=True)
     (root / "scripts").mkdir()
     (root / "index.md").write_text(
         "# Index\n\n- [[domains/agent/concepts/example]] — Example\n"
@@ -36,6 +37,21 @@ def sample_wiki(tmp_path: Path) -> Path:
     )
     (root / "raw/10-AI/example.md").write_text(
         "# Raw Example\n\nLangGraph raw source.\n"
+    )
+    (root / "workshop/example-project/README.md").write_text(
+        "---\n"
+        "title: Example Workshop Project\n"
+        "created: 2026-01-01\n"
+        "updated: 2026-01-01\n"
+        "type: entity\n"
+        "tags: [ai, agent]\n"
+        "sources: [workshop/example-project/raw/design.md]\n"
+        "confidence: medium\n"
+        "---\n\n"
+        "# Example Workshop Project\n\nWorkshop MCP project entry.\n"
+    )
+    (root / "workshop/example-project/raw/design.md").write_text(
+        "# Workshop Design\n\nWorkshop raw evidence.\n"
     )
     (root / "scripts/wiki_lint.py").write_text(
         "print('Wiki lint summary')\n"

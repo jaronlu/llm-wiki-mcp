@@ -39,19 +39,13 @@ def _extract_backlinks(paths: WikiPaths, page_path: Any) -> list[str]:
     target_slug = _page_slug(paths, page_path)
     target_names = {target_slug, f"{target_slug}.md"}
     backlinks: list[str] = []
-    for dirname in paths.formal_dirs:
-        base = paths.root / dirname
-        if not base.exists():
+    for candidate in paths.iter_formal_pages():
+        if candidate == page_path:
             continue
-        for candidate in sorted(base.rglob("*.md")):
-            if candidate == page_path:
-                continue
-            if not paths.is_formal_page(candidate):
-                continue
-            parsed = parse_markdown(candidate.read_text(errors="replace"))
-            links = set(extract_wikilinks(parsed.content))
-            if links & target_names:
-                backlinks.append(paths.rel(candidate))
+        parsed = parse_markdown(candidate.read_text(errors="replace"))
+        links = set(extract_wikilinks(parsed.content))
+        if links & target_names:
+            backlinks.append(paths.rel(candidate))
     return backlinks
 
 

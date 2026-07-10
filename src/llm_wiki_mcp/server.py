@@ -16,6 +16,7 @@ paths = WikiPaths(
     config.wiki_root,
     formal_dirs=config.formal_dirs,
     raw_dirs=config.raw_dirs,
+    workshop_dirs=config.workshop_dirs,
     non_formal_dirs=config.non_formal_dirs,
 )
 mcp = FastMCP("llm-wiki-mcp")
@@ -88,6 +89,7 @@ def init_wiki(
             language=language,
             formal_dirs=config.formal_dirs,
             raw_dirs=config.raw_dirs,
+            workshop_dirs=config.workshop_dirs,
             non_formal_dirs=config.non_formal_dirs,
         )
 
@@ -105,6 +107,7 @@ def inspect_wiki(
             root or str(paths.root),
             formal_dirs=config.formal_dirs,
             raw_dirs=config.raw_dirs,
+            workshop_dirs=config.workshop_dirs,
             non_formal_dirs=config.non_formal_dirs,
         ),
         request_id,

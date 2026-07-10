@@ -17,6 +17,7 @@ class WikiPaths:
     root: Path
     formal_dirs: tuple[str, ...] = ("domains", "entities")
     raw_dirs: tuple[str, ...] = ("raw",)
+    workshop_dirs: tuple[str, ...] = ("workshop",)
     non_formal_dirs: tuple[str, ...] = ("drafts", "reading")
 
     def __post_init__(self) -> None:
@@ -83,16 +84,82 @@ class WikiPaths:
     def require_raw_path(self, path: str | Path) -> Path:
         """Resolve a path and require that it belongs to configured raw zones."""
 
-        return self.require_under_any(path, self.raw_dirs, "raw_dirs")
+        resolved = self.resolve(path)
+        if not self.is_raw_source(resolved):
+            raise WikiPathError(f"Path is not a raw source: {self.rel(resolved)}")
+        return resolved
+
+    def _is_workshop_entrypoint(self, relative: str) -> bool:
+        """Return whether a relative path is a Workshop project README."""
+
+        parts = Path(relative).parts
+        return (
+            len(parts) == 3
+            and parts[0] in self.workshop_dirs
+            and parts[2] == "README.md"
+        )
+
+    def _is_workshop_raw(self, relative: str) -> bool:
+        """Return whether a relative path belongs to a Workshop raw subtree."""
+
+        parts = Path(relative).parts
+        return len(parts) >= 4 and parts[0] in self.workshop_dirs and parts[2] == "raw"
+
+    def is_raw_source(self, path: str | Path) -> bool:
+        """Return whether a path belongs to a configured raw source zone."""
+
+        relative = self.rel(path)
+        if self._is_workshop_raw(relative):
+            return True
+        return any(
+            relative == dirname.strip("/")
+            or relative.startswith(f"{dirname.strip('/')}/")
+            for dirname in self.raw_dirs
+        )
 
     def is_formal_page(self, path: str | Path) -> bool:
         """Return whether a path belongs to the formal wiki page zones."""
 
         rel = self.rel(path)
-        return any(
+        return self._is_workshop_entrypoint(rel) or any(
             rel == dirname.strip("/") or rel.startswith(f"{dirname.strip('/')}/")
             for dirname in self.formal_dirs
         )
+
+    def iter_formal_pages(self) -> list[Path]:
+        """Return formal markdown pages from standard and Workshop zones."""
+
+        pages: list[Path] = []
+        for dirname in self.formal_dirs:
+            base = self.root / dirname
+            if base.exists():
+                pages.extend(base.rglob("*.md"))
+        for dirname in self.workshop_dirs:
+            base = self.root / dirname
+            if not base.exists():
+                continue
+            for project in base.iterdir():
+                entrypoint = project / "README.md"
+                if project.is_dir() and entrypoint.is_file():
+                    pages.append(entrypoint)
+        return sorted(set(pages))
+
+    def iter_raw_sources(self) -> list[Path]:
+        """Return raw markdown sources from standard and Workshop zones."""
+
+        sources: list[Path] = []
+        for dirname in self.raw_dirs:
+            base = self.root / dirname
+            if base.exists():
+                sources.extend(base.rglob("*.md"))
+        for dirname in self.workshop_dirs:
+            base = self.root / dirname
+            if not base.exists():
+                continue
+            for raw_dir in base.glob("*/raw"):
+                if raw_dir.is_dir():
+                    sources.extend(raw_dir.rglob("*.md"))
+        return sorted(set(sources))
 
     def require_formal_page(self, path: str | Path) -> Path:
         """Resolve a formal wiki page path or slug and require an existing markdown file."""

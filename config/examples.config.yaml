@@ -8,4 +8,5 @@ allow_modify_schema: false
 log_retention_entries: 120
 formal_dirs: [domains, entities]
 raw_dirs: [raw]
+workshop_dirs: [workshop]
 non_formal_dirs: [drafts, reading]
