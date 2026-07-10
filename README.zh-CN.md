@@ -1,5 +1,7 @@
 # llm-wiki-mcp
 
+[**English**](README.md) | [中文](README.zh-CN.md)
+
 ![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 ![Tests](https://img.shields.io/badge/tests-87%20passing-brightgreen)
@@ -60,7 +62,7 @@ run_lint
 ## 快速开始
 
 ```bash
-git clone https://github.com/JaronLu/llm-wiki-mcp.git
+git clone https://github.com/jaronlu/llm-wiki-mcp.git
 cd llm-wiki-mcp
 uv sync --dev
 cp config/examples.config.yaml config/config.yaml
