@@ -8,3 +8,5 @@ __pycache__/
 .env
 .env.*
 config/config.yaml
+uv.lock
+.python-version
